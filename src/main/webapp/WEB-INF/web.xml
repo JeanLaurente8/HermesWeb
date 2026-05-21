@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns="http://java.sun.com/xml/ns/javaee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://java.sun.com/xml/ns/javaee 
+                             http://java.sun.com/xml/ns/javaee/web-app_3_0.xsd"
+         version="3.0">
+
+    <display-name>HermesWeb</display-name>
+
+    <welcome-file-list>
+        <welcome-file>index.jsp</welcome-file>
+    </welcome-file-list>
+
+    <!-- Raíz del sistema → LoginServlet -->
+    <servlet-mapping>
+        <servlet-name>LoginServlet</servlet-name>
+        <url-pattern>/</url-pattern>
+    </servlet-mapping>
+
+    <!-- Login / Logout / Menú -->
+    <servlet>
+        <servlet-name>LoginServlet</servlet-name>
+        <servlet-class>controlador.LoginServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>LoginServlet</servlet-name>
+        <url-pattern>/LoginServlet</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>LogoutServlet</servlet-name>
+        <servlet-class>controlador.LogoutServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>LogoutServlet</servlet-name>
+        <url-pattern>/LogoutServlet</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>MenuServlet</servlet-name>
+        <servlet-class>controlador.MenuServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>MenuServlet</servlet-name>
+        <url-pattern>/MenuServlet</url-pattern>
+    </servlet-mapping>
+
+    <!-- Áreas de Trabajo -->
+    <servlet>
+        <servlet-name>AreaTrabajoServlet</servlet-name>
+        <servlet-class>controlador.AreaTrabajoServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>AreaTrabajoServlet</servlet-name>
+        <url-pattern>/AreaTrabajoServlet</url-pattern>
+    </servlet-mapping>
+
+    <!-- Empleados -->
+    <servlet>
+        <servlet-name>EmpleadoServlet</servlet-name>
+        <servlet-class>controlador.EmpleadoServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>EmpleadoServlet</servlet-name>
+        <url-pattern>/EmpleadoServlet</url-pattern>
+    </servlet-mapping>
+
+    <!-- Proveedores -->
+    <servlet>
+        <servlet-name>ProveedorServlet</servlet-name>
+        <servlet-class>controlador.ProveedorServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>ProveedorServlet</servlet-name>
+        <url-pattern>/ProveedorServlet</url-pattern>
+    </servlet-mapping>
+
+    <!-- Artículos -->
+    <servlet>
+        <servlet-name>ArticuloServlet</servlet-name>
+        <servlet-class>controlador.ArticuloServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>ArticuloServlet</servlet-name>
+        <url-pattern>/ArticuloServlet</url-pattern>
+    </servlet-mapping>
+
+    <!-- Solicitudes -->
+    <servlet>
+        <servlet-name>SolicitudServlet</servlet-name>
+        <servlet-class>controlador.SolicitudServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>SolicitudServlet</servlet-name>
+        <url-pattern>/SolicitudServlet</url-pattern>
+    </servlet-mapping>
+
+    <!-- Órdenes de Compra -->
+    <servlet>
+        <servlet-name>OrdenCompraServlet</servlet-name>
+        <servlet-class>controlador.OrdenCompraServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>OrdenCompraServlet</servlet-name>
+        <url-pattern>/OrdenCompraServlet</url-pattern>
+    </servlet-mapping>
+
+    <!-- Conformidad -->
+    <servlet>
+        <servlet-name>ConformidadServlet</servlet-name>
+        <servlet-class>controlador.ConformidadServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>ConformidadServlet</servlet-name>
+        <url-pattern>/ConformidadServlet</url-pattern>
+    </servlet-mapping>
+
+</web-app>
