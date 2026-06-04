@@ -52,33 +52,17 @@
             List<Solicitud> solicitudes = (List<Solicitud>) request.getAttribute("solicitudes");
             List<Empleado> empleados = (List<Empleado>) request.getAttribute("empleados");
             Conformidad conformidadEditar = (Conformidad) request.getAttribute("conformidadEditar");
+            String errorBackend = (String) request.getAttribute("error");
+        %>
+        <%
+            boolean esAdmin = sesion != null && ("Gerente Compras".equals(sesion.getCargo())
+                    || "Administrador".equals(sesion.getCargo())
+                    || "admin".equalsIgnoreCase(sesion.getUsername()));
         %>
         <div class="container-fluid p-0"><div class="row g-0">
 
-                <!-- SIDEBAR -->
-                <div class="col-md-3 col-lg-2 sidebar">
-                    <div class="p-3 border-bottom border-secondary border-opacity-25">
-                        <div class="d-flex align-items-center gap-2"><span style="font-size:22px">🛡️</span>
-                            <div><div class="fw-bold" style="font-size:14px">Hermes</div><div style="font-size:11px;opacity:.6">Inventario</div></div></div>
-                    </div>
-                    <nav class="pt-2"><ul class="nav flex-column">
-                            <li><a href="${pageContext.request.contextPath}/MenuServlet" class="nav-link"><i class="fas fa-home me-2"></i>Inicio</a></li>
-                            <div class="nav-section">Inventario</div>
-                            <li><a href="${pageContext.request.contextPath}/ArticuloServlet?accion=listar" class="nav-link"><i class="fas fa-boxes me-2"></i>Artículos</a></li>
-                            <li><a href="${pageContext.request.contextPath}/AreaTrabajoServlet?accion=listar" class="nav-link"><i class="fas fa-building me-2"></i>Áreas</a></li>
-                            <div class="nav-section">Compras</div>
-                            <li><a href="${pageContext.request.contextPath}/SolicitudServlet?accion=listar" class="nav-link"><i class="fas fa-clipboard-list me-2"></i>Solicitudes</a></li>
-                            <li><a href="${pageContext.request.contextPath}/OrdenCompraServlet?accion=listar" class="nav-link"><i class="fas fa-shopping-cart me-2"></i>Órdenes OC</a></li>
-                            <li><a href="${pageContext.request.contextPath}/ConformidadServlet?accion=listar" class="nav-link active"><i class="fas fa-check-circle me-2"></i>Conformidad</a></li>
-                            <div class="nav-section">AdministraciÃ³n</div>
-                            <li><a href="${pageContext.request.contextPath}/EmpleadoServlet?accion=listar" class="nav-link"><i class="fas fa-users me-2"></i>Empleados</a></li>
-                            <li><a href="${pageContext.request.contextPath}/ProveedorServlet?accion=listar" class="nav-link"><i class="fas fa-truck me-2"></i>Proveedores</a></li>
-                            <div class="nav-section mt-2"></div>
-                            <li><a href="${pageContext.request.contextPath}/LogoutServlet" class="nav-link text-danger"><i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión</a></li>
-                        </ul></nav>
-                </div>
-
-                <!-- MAIN -->
+                <jsp:include page="/WEB-INF/vistas/sidebar.jsp" />
+                
                 <div class="col-md-9 col-lg-10 main-content">
                     <div class="topbar d-flex justify-content-between align-items-center">
                         <div><h6 class="mb-0 fw-bold"><i class="fas fa-check-circle me-2 text-primary"></i>Conformidad de Pedidos</h6>
@@ -87,14 +71,20 @@
                     </div>
                     <div class="p-4">
 
-                        <!-- FORMULARIO -->
+                        <% if (errorBackend != null) {%>
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i> <%= errorBackend%>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                        <% }%>
+
                         <div class="card card-modern mb-4">
                             <div class="card-header bg-white py-3">
                                 <h5 class="mb-0"><i class="fas fa-<%= conformidadEditar != null ? "edit" : "plus-circle"%> me-2 text-primary"></i>
                                     <%= conformidadEditar != null ? "Editar Conformidad" : "Registrar Conformidad"%></h5>
                             </div>
                             <div class="card-body">
-                                <form action="${pageContext.request.contextPath}/ConformidadServlet" method="post" class="row g-3">
+                                <form action="${pageContext.request.contextPath}/ConformidadServlet" method="post" class="row g-3 needs-validation" novalidate>
                                     <input type="hidden" name="accion" value="<%= conformidadEditar != null ? "actualizar" : "guardar"%>"/>
                                     <% if (conformidadEditar != null) {%>
                                     <input type="hidden" name="idConformidad" value="<%= conformidadEditar.getIdConformidad()%>"/>
@@ -107,14 +97,15 @@
                                             <% if (solicitudes != null) {
                                                     for (Solicitud s : solicitudes) {
                                                         boolean sel = conformidadEditar != null && conformidadEditar.getSolicitud() != null
-                                                && conformidadEditar.getSolicitud().getIdSolicitud() == s.getIdSolicitud();%>
+                                                                && conformidadEditar.getSolicitud().getIdSolicitud() == s.getIdSolicitud();%>
                                             <option value="<%= s.getIdSolicitud()%>" <%= sel ? "selected" : ""%>>
                                                 #<%= s.getIdSolicitud()%> <%= s.getEmpleado() != null ? s.getEmpleado().getNombreCompleto() : "?"%>
                                                 (<%= s.getEstadoSolicitud()%>)
                                             </option>
                                             <% }
-                                } %>
+                                                } %>
                                         </select>
+                                        <div class="invalid-feedback">Por favor, seleccione una solicitud.</div>
                                     </div>
                                     <div class="col-md-4">
                                         <label class="form-label fw-semibold">Empleado que Recibe</label>
@@ -123,17 +114,20 @@
                                             <% if (empleados != null) {
                                                     for (Empleado e : empleados) {
                                                         boolean sel = conformidadEditar != null && conformidadEditar.getEmpleado() != null
-                                                && conformidadEditar.getEmpleado().getIdEmpleado() == e.getIdEmpleado();%>
+                                                                && conformidadEditar.getEmpleado().getIdEmpleado() == e.getIdEmpleado();%>
                                             <option value="<%= e.getIdEmpleado()%>" <%= sel ? "selected" : ""%>><%= e.getNombreCompleto()%></option>
                                             <% }
-                                }%>
+                                                }%>
                                         </select>
+                                        <div class="invalid-feedback">Por favor, seleccione el empleado receptor.</div>
                                     </div>
                                     <div class="col-md-4">
                                         <label class="form-label fw-semibold">Comentarios</label>
                                         <input type="text" name="comentarios" class="form-control"
                                                value="<%= conformidadEditar != null && conformidadEditar.getComentarios() != null ? conformidadEditar.getComentarios() : ""%>"
-                                               placeholder="Observaciones sobre la recepción">
+                                               placeholder="Observaciones sobre la recepción"
+                                               pattern="^[a-zA-ZÁ-ÿ0-9\s\-]*$" maxlength="255">
+                                        <div class="invalid-feedback">Formato inválido. Solo se admiten letras, números, espacios y guiones.</div>
                                     </div>
                                     <div class="col-md-3 d-flex align-items-center gap-3">
                                         <div class="form-check form-switch">
@@ -156,7 +150,6 @@
                             </div>
                         </div>
 
-                        <!-- TABLA -->
                         <div class="card card-modern">
                             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                                 <h5 class="mb-0"><i class="fas fa-list me-2 text-primary"></i>Registro de Conformidades</h5>
@@ -170,16 +163,16 @@
                                         </thead>
                                         <tbody>
                                             <% if (conformidades != null && !conformidades.isEmpty()) {
-                                for (Conformidad c : conformidades) {%>
+                                                    for (Conformidad c : conformidades) {%>
                                             <tr>
                                                 <td class="px-4 fw-semibold text-primary">#<%= c.getIdConformidad()%></td>
                                                 <td>
                                                     <span class="badge bg-light text-dark border">
-                                                        #<%= c.getSolicitud() != null ? c.getSolicitud().getIdSolicitud() : "â€”"%>
+                                                        #<%= c.getSolicitud() != null ? c.getSolicitud().getIdSolicitud() : "—"%>
                                                     </span>
                                                 </td>
-                                                <td><div class="fw-semibold"><%= c.getEmpleado() != null ? c.getEmpleado().getNombreCompleto() : "â€”"%></div></td>
-                                                <td><small class="text-muted"><%= c.getFechaConformidad() != null ? c.getFechaConformidad().toString().replace("T", " ").substring(0, 16) : "â€”"%></small></td>
+                                                <td><div class="fw-semibold"><%= c.getEmpleado() != null ? c.getEmpleado().getNombreCompleto() : "—"%></div></td>
+                                                <td><small class="text-muted"><%= c.getFechaConformidad() != null ? c.getFechaConformidad().toString().replace("T", " ").substring(0, 16) : "—"%></small></td>
                                                 <td class="text-center">
                                                     <% if (c.isFirmaConformidad()) { %>
                                                     <span class="badge bg-success"><i class="fas fa-check me-1"></i>Firmado</span>
@@ -193,11 +186,11 @@
                                                        class="btn btn-sm btn-outline-primary me-1"><i class="fas fa-edit"></i></a>
                                                     <a href="${pageContext.request.contextPath}/ConformidadServlet?accion=eliminar&id=<%= c.getIdConformidad()%>"
                                                        class="btn btn-sm btn-outline-danger"
-                                                       onclick="return confirm('Â¿Eliminar conformidad #<%= c.getIdConformidad()%>?')"><i class="fas fa-trash"></i></a>
+                                                       onclick="return confirm('¿Eliminar conformidad #<%= c.getIdConformidad()%>?')"><i class="fas fa-trash"></i></a>
                                                 </td>
                                             </tr>
                                             <% }
-                        } else { %>
+                                            } else { %>
                                             <tr><td colspan="7" class="text-center py-5 text-muted">
                                                     <i class="fas fa-check-circle fa-3x mb-3 d-block"></i>No hay conformidades registradas
                                                 </td></tr>
@@ -211,4 +204,20 @@
                 </div>
             </div></div>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+        <script>
+                                                           // Validación Frontend con Bootstrap
+                                                           (() => {
+                                                               'use strict'
+                                                               const forms = document.querySelectorAll('.needs-validation')
+                                                               Array.from(forms).forEach(form => {
+                                                                   form.addEventListener('submit', event => {
+                                                                       if (!form.checkValidity()) {
+                                                                           event.preventDefault()
+                                                                           event.stopPropagation()
+                                                                       }
+                                                                       form.classList.add('was-validated')
+                                                                   }, false)
+                                                               })
+                                                           })()
+        </script>
     </body></html>

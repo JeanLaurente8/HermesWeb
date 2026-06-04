@@ -1,5 +1,5 @@
 <%@ page contentType="text/html;charset=UTF-8" %>
-<%@ page import="modelo.*, java.util.*" %>
+<%@ page import="modelo.*, java.util.*, util.AuthUtils" %>
 <!DOCTYPE html>
 <html lang="es">
     <head>
@@ -96,39 +96,10 @@
         %>
         <div class="container-fluid p-0">
             <div class="row g-0">
-                <!-- SIDEBAR -->
-                <div class="col-md-3 col-lg-2 sidebar">
-                    <div class="brand">
-                        <div class="d-flex align-items-center gap-2">
-                            <span style="font-size:24px">🛡️</span>
-                            <div>
-                                <div class="fw-bold" style="font-size:15px">Hermes</div>
-                                <div style="font-size:11px;opacity:.6">Sistema de Inventario</div>
-                            </div>
-                        </div>
-                    </div>
-                    <nav class="pt-2">
-                        <ul class="nav flex-column">
-                            <li><a href="${pageContext.request.contextPath}/MenuServlet" class="nav-link active"><i class="fas fa-home me-2"></i>Inicio</a></li>
-                            <div class="nav-section">Inventario</div>
-                            <li><a href="${pageContext.request.contextPath}/ArticuloServlet?accion=listar" class="nav-link"><i class="fas fa-boxes me-2"></i>Artículos</a></li>
-                            <li><a href="${pageContext.request.contextPath}/AreaTrabajoServlet?accion=listar" class="nav-link"><i class="fas fa-building me-2"></i>Áreas</a></li>
-                            <div class="nav-section">Compras</div>
-                            <li><a href="${pageContext.request.contextPath}/SolicitudServlet?accion=listar" class="nav-link"><i class="fas fa-clipboard-list me-2"></i>Solicitudes</a></li>
-                            <li><a href="${pageContext.request.contextPath}/OrdenCompraServlet?accion=listar" class="nav-link"><i class="fas fa-shopping-cart me-2"></i>Órdenes OC</a></li>
-                            <li><a href="${pageContext.request.contextPath}/ConformidadServlet?accion=listar" class="nav-link"><i class="fas fa-check-circle me-2"></i>Conformidad</a></li>
-                            <div class="nav-section">Administración</div>
-                            <li><a href="${pageContext.request.contextPath}/EmpleadoServlet?accion=listar" class="nav-link"><i class="fas fa-users me-2"></i>Empleados</a></li>
-                            <li><a href="${pageContext.request.contextPath}/ProveedorServlet?accion=listar" class="nav-link"><i class="fas fa-truck me-2"></i>Proveedores</a></li>
-                            <div class="nav-section mt-3"></div>
-                            <li><a href="${pageContext.request.contextPath}/LogoutServlet" class="nav-link text-danger"><i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión</a></li>
-                        </ul>
-                    </nav>
-                </div>
 
-                <!-- MAIN -->
+                <jsp:include page="/WEB-INF/vistas/sidebar.jsp" />
+
                 <div class="col-md-9 col-lg-10 main-content">
-                    <!-- TOPBAR -->
                     <div class="topbar">
                         <div>
                             <h6 class="mb-0 fw-bold text-dark">Panel Principal</h6>
@@ -138,18 +109,16 @@
                             <% if (totalAlertas > 0) {%>
                             <span class="badge bg-warning text-dark"><i class="fas fa-bell me-1"></i><%= totalAlertas%> alertas</span>
                             <% }%>
-                            <span class="text-muted small"><i class="fas fa-user me-1"></i><%= sesion != null ? sesion.getNombreCompleto() : ""%> &nbsp;·&nbsp; <%= sesion != null ? sesion.getCargo() : ""%></span>
+                            <span class="text-muted small"><i class="fas fa-user me-1"></i><%= sesion != null ? sesion.getNombreCompleto() : ""%> &nbsp;·&nbsp; <strong class="text-primary"><%= sesion != null ? sesion.getCargo() : ""%></strong></span>
                         </div>
                     </div>
 
                     <div class="p-4">
-                        <!-- Bienvenida -->
                         <div class="mb-4">
                             <h4 class="fw-bold text-dark mb-1">Bienvenido, <%= sesion != null ? sesion.getNombre() : ""%> 👋</h4>
-                            <p class="text-muted">Accede a todas las funcionalidades del sistema desde aquí.</p>
+                            <p class="text-muted">Accede a todas las funcionalidades del sistema desde aquí según tus permisos.</p>
                         </div>
 
-                        <!-- Alerta de stock -->
                         <% if (totalAlertas > 0) {%>
                         <div class="alert-strip mb-4">
                             <div class="d-flex align-items-center gap-3">
@@ -163,8 +132,8 @@
                         </div>
                         <% } %>
 
-                        <!-- Cards de módulos -->
                         <div class="row g-3">
+                            <% if (AuthUtils.puedeVerModulo(sesion, "Articulos")) { %>
                             <div class="col-md-4 col-lg-3">
                                 <a href="${pageContext.request.contextPath}/ArticuloServlet?accion=listar" class="card-modern card p-3">
                                     <div class="card-icon-wrap bg-primary bg-opacity-10 mb-3"><i class="fas fa-boxes text-primary"></i></div>
@@ -175,6 +144,9 @@
                                     <% }%>
                                 </a>
                             </div>
+                            <% } %>
+
+                            <% if (AuthUtils.puedeVerModulo(sesion, "Solicitudes")) { %>
                             <div class="col-md-4 col-lg-3">
                                 <a href="${pageContext.request.contextPath}/SolicitudServlet?accion=listar" class="card-modern card p-3">
                                     <div class="card-icon-wrap bg-success bg-opacity-10 mb-3"><i class="fas fa-clipboard-list text-success"></i></div>
@@ -182,6 +154,9 @@
                                     <small class="text-muted">Pedidos de insumos</small>
                                 </a>
                             </div>
+                            <% } %>
+
+                            <% if (AuthUtils.puedeVerModulo(sesion, "OrdenesCompra")) { %>
                             <div class="col-md-4 col-lg-3">
                                 <a href="${pageContext.request.contextPath}/OrdenCompraServlet?accion=listar" class="card-modern card p-3">
                                     <div class="card-icon-wrap bg-warning bg-opacity-10 mb-3"><i class="fas fa-shopping-cart text-warning"></i></div>
@@ -189,6 +164,9 @@
                                     <small class="text-muted">Generación y aprobación</small>
                                 </a>
                             </div>
+                            <% } %>
+
+                            <% if (AuthUtils.puedeVerModulo(sesion, "Conformidad")) { %>
                             <div class="col-md-4 col-lg-3">
                                 <a href="${pageContext.request.contextPath}/ConformidadServlet?accion=listar" class="card-modern card p-3">
                                     <div class="card-icon-wrap bg-info bg-opacity-10 mb-3"><i class="fas fa-check-circle text-info"></i></div>
@@ -196,20 +174,9 @@
                                     <small class="text-muted">Recepción de pedidos</small>
                                 </a>
                             </div>
-                            <div class="col-md-4 col-lg-3">
-                                <a href="${pageContext.request.contextPath}/ProveedorServlet?accion=listar" class="card-modern card p-3">
-                                    <div class="card-icon-wrap bg-secondary bg-opacity-10 mb-3"><i class="fas fa-truck text-secondary"></i></div>
-                                    <h6 class="fw-bold mb-1">Proveedores</h6>
-                                    <small class="text-muted">Directorio de proveedores</small>
-                                </a>
-                            </div>
-                            <div class="col-md-4 col-lg-3">
-                                <a href="${pageContext.request.contextPath}/EmpleadoServlet?accion=listar" class="card-modern card p-3">
-                                    <div class="card-icon-wrap bg-danger bg-opacity-10 mb-3"><i class="fas fa-users text-danger"></i></div>
-                                    <h6 class="fw-bold mb-1">Empleados</h6>
-                                    <small class="text-muted">Personal del sistema</small>
-                                </a>
-                            </div>
+                            <% } %>
+
+                            <% if (AuthUtils.puedeVerModulo(sesion, "Areas")) { %>
                             <div class="col-md-4 col-lg-3">
                                 <a href="${pageContext.request.contextPath}/AreaTrabajoServlet?accion=listar" class="card-modern card p-3">
                                     <div class="card-icon-wrap bg-dark bg-opacity-10 mb-3"><i class="fas fa-building text-dark"></i></div>
@@ -217,6 +184,27 @@
                                     <small class="text-muted">Sedes y áreas</small>
                                 </a>
                             </div>
+                            <% } %>
+
+                            <% if (AuthUtils.puedeVerModulo(sesion, "Proveedores")) { %>
+                            <div class="col-md-4 col-lg-3">
+                                <a href="${pageContext.request.contextPath}/ProveedorServlet?accion=listar" class="card-modern card p-3">
+                                    <div class="card-icon-wrap bg-secondary bg-opacity-10 mb-3"><i class="fas fa-truck text-secondary"></i></div>
+                                    <h6 class="fw-bold mb-1">Proveedores</h6>
+                                    <small class="text-muted">Directorio de proveedores</small>
+                                </a>
+                            </div>
+                            <% } %>
+
+                            <% if (AuthUtils.puedeVerModulo(sesion, "Empleados")) { %>
+                            <div class="col-md-4 col-lg-3">
+                                <a href="${pageContext.request.contextPath}/EmpleadoServlet?accion=listar" class="card-modern card p-3">
+                                    <div class="card-icon-wrap bg-danger bg-opacity-10 mb-3"><i class="fas fa-users text-danger"></i></div>
+                                    <h6 class="fw-bold mb-1">Empleados</h6>
+                                    <small class="text-muted">Personal del sistema</small>
+                                </a>
+                            </div>
+                            <% }%>
                         </div>
                     </div>
                 </div>

@@ -1,5 +1,5 @@
 <%@ page contentType="text/html;charset=UTF-8" %>
-<%@ page import="modelo.*, java.util.*" %>
+<%@ page import="modelo.*, java.util.*, util.AuthUtils" %>
 <!DOCTYPE html>
 <html lang="es">
     <head>
@@ -57,6 +57,9 @@
                 border-radius:3px;
                 transition:.3s
             }
+            .search-box {
+                max-width: 300px;
+            }
         </style>
     </head>
     <body>
@@ -64,6 +67,11 @@
             Empleado sesion = (Empleado) session.getAttribute("empleado");
             List<Articulo> articulos = (List<Articulo>) request.getAttribute("articulos");
             Articulo articuloEditar = (Articulo) request.getAttribute("articuloEditar");
+            String errorBackend = (String) request.getAttribute("error");
+
+            // Validación de permisos para artículos según el usuario
+            boolean tieneAccesoCompleto = AuthUtils.tieneAccesoCompleto(sesion, "Articulos");
+
             int totalAlertas = 0;
             if (articulos != null) {
                 for (Articulo a : articulos) {
@@ -73,31 +81,11 @@
                 }
             }
         %>
+
         <div class="container-fluid p-0"><div class="row g-0">
-                <!-- SIDEBAR -->
-                <div class="col-md-3 col-lg-2 sidebar">
-                    <div class="p-3 border-bottom border-secondary border-opacity-25">
-                        <div class="d-flex align-items-center gap-2"><span style="font-size:22px">🛡️</span>
-                            <div><div class="fw-bold" style="font-size:14px">Hermes</div><div style="font-size:11px;opacity:.6">Inventario</div></div>
-                        </div>
-                    </div>
-                    <nav class="pt-2"><ul class="nav flex-column">
-                            <li><a href="${pageContext.request.contextPath}/MenuServlet" class="nav-link"><i class="fas fa-home me-2"></i>Inicio</a></li>
-                            <div class="nav-section">Inventario</div>
-                            <li><a href="${pageContext.request.contextPath}/ArticuloServlet?accion=listar" class="nav-link active"><i class="fas fa-boxes me-2"></i>Artículos</a></li>
-                            <li><a href="${pageContext.request.contextPath}/AreaTrabajoServlet?accion=listar" class="nav-link"><i class="fas fa-building me-2"></i>Áreas</a></li>
-                            <div class="nav-section">Compras</div>
-                            <li><a href="${pageContext.request.contextPath}/SolicitudServlet?accion=listar" class="nav-link"><i class="fas fa-clipboard-list me-2"></i>Solicitudes</a></li>
-                            <li><a href="${pageContext.request.contextPath}/OrdenCompraServlet?accion=listar" class="nav-link"><i class="fas fa-shopping-cart me-2"></i>Órdenes OC</a></li>
-                            <li><a href="${pageContext.request.contextPath}/ConformidadServlet?accion=listar" class="nav-link"><i class="fas fa-check-circle me-2"></i>Conformidad</a></li>
-                            <div class="nav-section">Administración</div>
-                            <li><a href="${pageContext.request.contextPath}/EmpleadoServlet?accion=listar" class="nav-link"><i class="fas fa-users me-2"></i>Empleados</a></li>
-                            <li><a href="${pageContext.request.contextPath}/ProveedorServlet?accion=listar" class="nav-link"><i class="fas fa-truck me-2"></i>Proveedores</a></li>
-                            <div class="nav-section mt-2"></div>
-                            <li><a href="${pageContext.request.contextPath}/LogoutServlet" class="nav-link text-danger"><i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión</a></li>
-                        </ul></nav>
-                </div>
-                <!-- MAIN -->
+
+                <jsp:include page="/WEB-INF/vistas/sidebar.jsp" />
+
                 <div class="col-md-9 col-lg-10 main-content">
                     <div class="topbar d-flex justify-content-between align-items-center">
                         <div><h6 class="mb-0 fw-bold"><i class="fas fa-boxes me-2 text-primary"></i>Artículos e Inventario</h6>
@@ -108,7 +96,14 @@
                         </div>
                     </div>
                     <div class="p-4">
-                        <!-- Alerta banner -->
+
+                        <% if (errorBackend != null) {%>
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i> <%= errorBackend%>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                        <% } %>
+
                         <% if (totalAlertas > 0) {%>
                         <div class="alert alert-warning d-flex align-items-center mb-4" role="alert">
                             <i class="fas fa-exclamation-triangle me-3 fs-5"></i>
@@ -116,30 +111,42 @@
                         </div>
                         <% }%>
 
-                        <!-- FORMULARIO -->
+                        <% if (tieneAccesoCompleto) {%>
                         <div class="card card-modern mb-4">
                             <div class="card-header bg-white py-3">
                                 <h5 class="mb-0"><i class="fas fa-<%= articuloEditar != null ? "edit" : "plus-circle"%> me-2 text-primary"></i><%= articuloEditar != null ? "Editar Artículo" : "Nuevo Artículo"%></h5>
                             </div>
                             <div class="card-body">
-                                <form action="${pageContext.request.contextPath}/ArticuloServlet" method="post" class="row g-3">
+                                <form action="${pageContext.request.contextPath}/ArticuloServlet" method="post" class="row g-3 needs-validation" novalidate>
                                     <input type="hidden" name="accion" value="<%= articuloEditar != null ? "actualizar" : "guardar"%>"/>
                                     <% if (articuloEditar != null) {%><input type="hidden" name="idArticulo" value="<%= articuloEditar.getIdArticulo()%>"/><% }%>
                                     <div class="col-md-4">
                                         <label class="form-label fw-semibold">Nombre del Artículo</label>
-                                        <input type="text" name="nombre" class="form-control" value="<%= articuloEditar != null ? articuloEditar.getNombre() : ""%>" placeholder="Ej: Chaleco antibalas" required>
+                                        <input type="text" name="nombre" class="form-control" 
+                                               value="<%= articuloEditar != null ? articuloEditar.getNombre() : ""%>" 
+                                               placeholder="Ej: Chaleco antibalas 2024" 
+                                               required minlength="3" maxlength="100" pattern="^[a-zA-ZÁ-ÿ0-9\s\-]+$">
+                                        <div class="invalid-feedback">Ingrese un nombre válido (letras, números, guiones). Mínimo 3 caracteres.</div>
                                     </div>
                                     <div class="col-md-2">
                                         <label class="form-label fw-semibold">Stock Actual</label>
-                                        <input type="number" name="stock" class="form-control" value="<%= articuloEditar != null ? articuloEditar.getStock() : "0"%>" min="0" required>
+                                        <input type="number" name="stock" class="form-control" 
+                                               value="<%= articuloEditar != null ? articuloEditar.getStock() : "0"%>" 
+                                               min="0" required>
+                                        <div class="invalid-feedback">Requerido (mín. 0).</div>
                                     </div>
                                     <div class="col-md-2">
                                         <label class="form-label fw-semibold">Stock Límite</label>
-                                        <input type="number" name="stockLimite" class="form-control" value="<%= articuloEditar != null ? articuloEditar.getStockLimite() : "5"%>" min="0" required>
+                                        <input type="number" name="stockLimite" class="form-control" 
+                                               value="<%= articuloEditar != null ? articuloEditar.getStockLimite() : "5"%>" 
+                                               min="0" required>
+                                        <div class="invalid-feedback">Requerido (mín. 0).</div>
                                     </div>
                                     <div class="col-md-4">
                                         <label class="form-label fw-semibold">Descripción</label>
-                                        <input type="text" name="descripcion" class="form-control" value="<%= articuloEditar != null && articuloEditar.getDescripcion() != null ? articuloEditar.getDescripcion() : ""%>" placeholder="Descripción opcional">
+                                        <input type="text" name="descripcion" class="form-control" 
+                                               value="<%= articuloEditar != null && articuloEditar.getDescripcion() != null ? articuloEditar.getDescripcion() : ""%>" 
+                                               placeholder="Descripción opcional" maxlength="255">
                                     </div>
                                     <% if (articuloEditar != null) {%>
                                     <div class="col-md-2 d-flex align-items-end">
@@ -163,18 +170,32 @@
                                 </form>
                             </div>
                         </div>
+                        <% }%>
 
-                        <!-- TABLA -->
                         <div class="card card-modern">
-                            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
                                 <h5 class="mb-0"><i class="fas fa-list me-2 text-primary"></i>Inventario de Artículos</h5>
+
+                                <div class="input-group search-box">
+                                    <span class="input-group-text bg-light border-end-0"><i class="fas fa-search text-muted"></i></span>
+                                    <input type="text" id="buscadorArticulos" class="form-control border-start-0 ps-0" placeholder="Buscar por nombre...">
+                                </div>
+
                                 <span class="badge bg-primary"><%= articulos != null ? articulos.size() : 0%> artículos</span>
                             </div>
                             <div class="card-body p-0">
                                 <div class="table-responsive">
-                                    <table class="table table-hover mb-0">
+                                    <table class="table table-hover mb-0" id="tablaArticulos">
                                         <thead class="bg-light">
-                                            <tr><th class="px-4">#</th><th>Artículo</th><th class="text-center">Stock Actual</th><th class="text-center">Límite</th><th class="text-center">Estado Stock</th><th class="text-center">Requiere OC</th><th class="text-center">Acciones</th></tr>
+                                            <tr>
+                                                <th class="px-4">#</th>
+                                                <th>Artículo</th>
+                                                <th class="text-center">Stock Actual</th>
+                                                <th class="text-center">Límite</th>
+                                                <th class="text-center">Estado Stock</th>
+                                                <th class="text-center">Requiere OC</th>
+                                                <% if (tieneAccesoCompleto) { %><th class="text-center">Acciones</th><% } %>
+                                            </tr>
                                         </thead>
                                         <tbody>
                                             <% if (articulos != null && !articulos.isEmpty()) {
@@ -183,9 +204,9 @@
                                                         int pct = a.getStockLimite() > 0 ? Math.min(100, a.getStock() * 100 / (a.getStockLimite() * 2)) : 100;
                                                         String barColor = alerta ? "#dc2626" : "#16a34a";
                                             %>
-                                            <tr class="<%= alerta ? "table-warning" : ""%>">
+                                            <tr class="<%= alerta ? "table-warning" : ""%> fila-articulo">
                                                 <td class="px-4 fw-semibold text-primary">#<%= a.getIdArticulo()%></td>
-                                                <td>
+                                                <td class="nombre-articulo">
                                                     <div class="fw-semibold"><%= a.getNombre()%></div>
                                                     <small class="text-muted"><%= a.getDescripcion() != null ? a.getDescripcion() : ""%></small>
                                                     <div class="stock-bar"><div class="stock-bar-fill" style="width:<%= pct%>%;background:<%= barColor%>"></div></div>
@@ -198,14 +219,17 @@
                                                     </span>
                                                 </td>
                                                 <td class="text-center"><span class="badge <%= a.isRequiereCompra() ? "bg-warning text-dark" : "bg-light text-secondary border"%>"><%= a.isRequiereCompra() ? "Sí" : "No"%></span></td>
+
+                                                <% if (tieneAccesoCompleto) {%>
                                                 <td class="text-center">
                                                     <a href="${pageContext.request.contextPath}/ArticuloServlet?accion=editar&id=<%= a.getIdArticulo()%>" class="btn btn-sm btn-outline-primary me-1"><i class="fas fa-edit"></i></a>
                                                     <a href="${pageContext.request.contextPath}/ArticuloServlet?accion=eliminar&id=<%= a.getIdArticulo()%>" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Eliminar artículo?')"><i class="fas fa-trash"></i></a>
                                                 </td>
+                                                <% } %>
                                             </tr>
                                             <% }
-                        } else { %>
-                                            <tr><td colspan="7" class="text-center py-5 text-muted"><i class="fas fa-boxes fa-3x mb-3 d-block"></i>No hay artículos registrados</td></tr>
+                                            } else {%>
+                                            <tr><td colspan="<%= tieneAccesoCompleto ? 7 : 6%>" class="text-center py-5 text-muted"><i class="fas fa-boxes fa-3x mb-3 d-block"></i>No hay artículos registrados</td></tr>
                                             <% }%>
                                         </tbody>
                                     </table>
@@ -216,4 +240,42 @@
                 </div>
             </div></div>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+        <script>
+                                                        // Validación Frontend con Bootstrap
+                                                        (() => {
+                                                            'use strict'
+                                                            const forms = document.querySelectorAll('.needs-validation')
+                                                            Array.from(forms).forEach(form => {
+                                                                form.addEventListener('submit', event => {
+                                                                    if (!form.checkValidity()) {
+                                                                        event.preventDefault()
+                                                                        event.stopPropagation()
+                                                                    }
+                                                                    form.classList.add('was-validated')
+                                                                }, false)
+                                                            })
+                                                        })();
+
+                                                        // Buscador
+                                                        document.addEventListener("DOMContentLoaded", function () {
+                                                            const inputBuscador = document.getElementById("buscadorArticulos");
+                                                            if (inputBuscador) {
+                                                                inputBuscador.addEventListener("keyup", function () {
+                                                                    const filtro = this.value.toLowerCase();
+                                                                    const filas = document.querySelectorAll("#tablaArticulos tbody tr.fila-articulo");
+
+                                                                    filas.forEach(fila => {
+                                                                        // Busca el texto dentro de la celda que tiene la clase 'nombre-articulo'
+                                                                        const nombreArticulo = fila.querySelector(".nombre-articulo .fw-semibold").textContent.toLowerCase();
+
+                                                                        if (nombreArticulo.includes(filtro)) {
+                                                                            fila.style.display = "";
+                                                                        } else {
+                                                                            fila.style.display = "none";
+                                                                        }
+                                                                    });
+                                                                });
+                                                            }
+                                                        });
+        </script>
     </body></html>

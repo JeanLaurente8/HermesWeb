@@ -85,24 +85,27 @@
                 </div>
                 <% }%>
 
-                <form action="${pageContext.request.contextPath}/LoginServlet" method="post">
+                <form action="${pageContext.request.contextPath}/LoginServlet" method="post" id="loginForm" class="needs-validation" novalidate>
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Usuario</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="fas fa-user text-muted"></i></span>
-                            <input type="text" name="username" class="form-control" placeholder="Ej: almacen01" required autofocus>
+                            <input type="text" name="username" id="username" class="form-control" placeholder="Ej: almacen01" required pattern="^[a-zA-Z0-9_\-]+$" autofocus>
+                            <div class="invalid-feedback">Ingrese un usuario válido.</div>
                         </div>
                     </div>
                     <div class="mb-4">
                         <label class="form-label fw-semibold">Contraseña</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="fas fa-lock text-muted"></i></span>
-                            <input type="password" name="password" class="form-control" placeholder="••••••••" required>
+                            <input type="password" name="password" id="password" class="form-control" placeholder="••••••••" required>
+                            <div class="invalid-feedback">La contraseña es obligatoria.</div>
                         </div>
                     </div>
                     <button type="submit" class="btn btn-login btn-primary w-100 text-white">
                         <i class="fas fa-sign-in-alt me-2"></i>Ingresar al Sistema
                     </button>
+                    <a href="RecuperacionServlet" class="small text-decoration-none">¿Olvidaste tu contraseña?</a>
                 </form>
 
                 <div class="hint-box mt-4">
@@ -113,6 +116,24 @@
                 </div>
             </div>
         </div>
+        
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+        <script>
+            (() => {
+                'use strict'
+                const form = document.getElementById('loginForm')
+                const userField = document.getElementById('username')
+                
+                form.addEventListener('submit', event => {
+                    userField.value = userField.value.trim();
+                    
+                    if (!form.checkValidity()) {
+                        event.preventDefault()
+                        event.stopPropagation()
+                    }
+                    form.classList.add('was-validated')
+                }, false)
+            })()
+        </script>
     </body>
 </html>

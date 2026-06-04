@@ -52,34 +52,18 @@
             List<Empleado> empleados = (List<Empleado>) request.getAttribute("empleados");
             List<Areatrabajo> areas = (List<Areatrabajo>) request.getAttribute("areas");
             Solicitud solicitudEditar = (Solicitud) request.getAttribute("solicitudEditar");
+            String errorBackend = (String) request.getAttribute("error");
             String[] estados = {"Pendiente", "Aprobada", "Rechazada", "Enviada", "Entregada"};
+        %>
+        <%
+            boolean esAdmin = sesion != null && ("Gerente Compras".equals(sesion.getCargo())
+                    || "Administrador".equals(sesion.getCargo())
+                    || "admin".equalsIgnoreCase(sesion.getUsername()));
         %>
         <div class="container-fluid p-0"><div class="row g-0">
 
-                <!-- SIDEBAR -->
-                <div class="col-md-3 col-lg-2 sidebar">
-                    <div class="p-3 border-bottom border-secondary border-opacity-25">
-                        <div class="d-flex align-items-center gap-2"><span style="font-size:22px">🛡️</span>
-                            <div><div class="fw-bold" style="font-size:14px">Hermes</div><div style="font-size:11px;opacity:.6">Inventario</div></div></div>
-                    </div>
-                    <nav class="pt-2"><ul class="nav flex-column">
-                            <li><a href="${pageContext.request.contextPath}/MenuServlet" class="nav-link"><i class="fas fa-home me-2"></i>Inicio</a></li>
-                            <div class="nav-section">Inventario</div>
-                            <li><a href="${pageContext.request.contextPath}/ArticuloServlet?accion=listar" class="nav-link"><i class="fas fa-boxes me-2"></i>Artículos</a></li>
-                            <li><a href="${pageContext.request.contextPath}/AreaTrabajoServlet?accion=listar" class="nav-link"><i class="fas fa-building me-2"></i>Áreas</a></li>
-                            <div class="nav-section">Compras</div>
-                            <li><a href="${pageContext.request.contextPath}/SolicitudServlet?accion=listar" class="nav-link active"><i class="fas fa-clipboard-list me-2"></i>Solicitudes</a></li>
-                            <li><a href="${pageContext.request.contextPath}/OrdenCompraServlet?accion=listar" class="nav-link"><i class="fas fa-shopping-cart me-2"></i>Órdenes OC</a></li>
-                            <li><a href="${pageContext.request.contextPath}/ConformidadServlet?accion=listar" class="nav-link"><i class="fas fa-check-circle me-2"></i>Conformidad</a></li>
-                            <div class="nav-section">AdministraciÃ³n</div>
-                            <li><a href="${pageContext.request.contextPath}/EmpleadoServlet?accion=listar" class="nav-link"><i class="fas fa-users me-2"></i>Empleados</a></li>
-                            <li><a href="${pageContext.request.contextPath}/ProveedorServlet?accion=listar" class="nav-link"><i class="fas fa-truck me-2"></i>Proveedores</a></li>
-                            <div class="nav-section mt-2"></div>
-                            <li><a href="${pageContext.request.contextPath}/LogoutServlet" class="nav-link text-danger"><i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión</a></li>
-                        </ul></nav>
-                </div>
-
-                <!-- MAIN -->
+                <jsp:include page="/WEB-INF/vistas/sidebar.jsp" />
+                
                 <div class="col-md-9 col-lg-10 main-content">
                     <div class="topbar d-flex justify-content-between align-items-center">
                         <div><h6 class="mb-0 fw-bold"><i class="fas fa-clipboard-list me-2 text-primary"></i>Gestión de Solicitudes</h6>
@@ -88,14 +72,20 @@
                     </div>
                     <div class="p-4">
 
-                        <!-- FORMULARIO -->
+                        <% if (errorBackend != null) {%>
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i> <%= errorBackend%>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                        <% }%>
+
                         <div class="card card-modern mb-4">
                             <div class="card-header bg-white py-3">
                                 <h5 class="mb-0"><i class="fas fa-<%= solicitudEditar != null ? "edit" : "plus-circle"%> me-2 text-primary"></i>
                                     <%= solicitudEditar != null ? "Editar Solicitud" : "Nueva Solicitud"%></h5>
                             </div>
                             <div class="card-body">
-                                <form action="${pageContext.request.contextPath}/SolicitudServlet" method="post" class="row g-3">
+                                <form action="${pageContext.request.contextPath}/SolicitudServlet" method="post" class="row g-3 needs-validation" novalidate>
                                     <input type="hidden" name="accion" value="<%= solicitudEditar != null ? "actualizar" : "guardar"%>"/>
                                     <% if (solicitudEditar != null) {%>
                                     <input type="hidden" name="idSolicitud" value="<%= solicitudEditar.getIdSolicitud()%>"/>
@@ -108,11 +98,12 @@
                                             <% if (empleados != null) {
                                                     for (Empleado e : empleados) {
                                                         boolean sel = solicitudEditar != null && solicitudEditar.getEmpleado() != null
-                                                && solicitudEditar.getEmpleado().getIdEmpleado() == e.getIdEmpleado();%>
+                                                                && solicitudEditar.getEmpleado().getIdEmpleado() == e.getIdEmpleado();%>
                                             <option value="<%= e.getIdEmpleado()%>" <%= sel ? "selected" : ""%>><%= e.getNombreCompleto()%></option>
                                             <% }
-                                } %>
+                                                } %>
                                         </select>
+                                        <div class="invalid-feedback">Seleccione al empleado solicitante.</div>
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label fw-semibold">Área de Procedencia</label>
@@ -121,25 +112,31 @@
                                             <% if (areas != null) {
                                                     for (Areatrabajo a : areas) {
                                                         boolean sel = solicitudEditar != null && solicitudEditar.getArea() != null
-                                                && solicitudEditar.getArea().getIdArea() == a.getIdArea();%>
+                                                                && solicitudEditar.getArea().getIdArea() == a.getIdArea();%>
                                             <option value="<%= a.getIdArea()%>" <%= sel ? "selected" : ""%>><%= a.getNombreArea()%></option>
                                             <% }
-                                } %>
+                                                }%>
                                         </select>
+                                        <div class="invalid-feedback">Seleccione el área.</div>
                                     </div>
                                     <div class="col-md-2">
                                         <label class="form-label fw-semibold">Estado</label>
-                                        <select name="estadoSolicitud" class="form-select">
-                                            <% for (String est : estados) {
-                                    boolean sel = solicitudEditar != null && est.equals(solicitudEditar.getEstadoSolicitud());%>
+                                        <select name="estadoSolicitud" class="form-select" <%= solicitudEditar == null ? "style='pointer-events: none; background-color: #e9ecef;'" : ""%>>
+                                            <% if (solicitudEditar == null) { %>
+                                            <option value="Pendiente" selected>Pendiente</option>
+                                            <% } else {
+                                                for (String est : estados) {
+                                                    boolean sel = est.equals(solicitudEditar.getEstadoSolicitud());%>
                                             <option value="<%= est%>" <%= sel ? "selected" : ""%>><%= est%></option>
-                                            <% }%>
+                                            <%  }
+                                                }%>
                                         </select>
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label fw-semibold">Descripción / Motivo</label>
-                                        <textarea name="descripcion" class="form-control" rows="2"
+                                        <textarea name="descripcion" class="form-control" rows="2" required
                                                   placeholder="Describa el motivo de la solicitud..."><%= solicitudEditar != null && solicitudEditar.getDescripcion() != null ? solicitudEditar.getDescripcion() : ""%></textarea>
+                                        <div class="invalid-feedback">Debe proveer un motivo o descripción para la solicitud.</div>
                                     </div>
                                     <div class="col-md-2 d-flex align-items-end">
                                         <button type="submit" class="btn btn-primary w-100">
@@ -155,7 +152,6 @@
                             </div>
                         </div>
 
-                        <!-- TABLA -->
                         <div class="card card-modern">
                             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                                 <h5 class="mb-0"><i class="fas fa-list me-2 text-primary"></i>Listado de Solicitudes</h5>
@@ -186,12 +182,12 @@
                                                                 break;
                                                             default:
                                                                 badgeClass = "bg-warning text-dark";
-                                    }%>
+                                                        }%>
                                             <tr>
                                                 <td class="px-4 fw-semibold text-primary">#<%= s.getIdSolicitud()%></td>
-                                                <td><div class="fw-semibold"><%= s.getEmpleado() != null ? s.getEmpleado().getNombreCompleto() : "â€”"%></div></td>
-                                                <td><%= s.getArea() != null ? s.getArea().getNombreArea() : "â€”"%></td>
-                                                <td><small class="text-muted"><%= s.getFechaSolicitud() != null ? s.getFechaSolicitud().toString().replace("T", " ").substring(0, 16) : "â€”"%></small></td>
+                                                <td><div class="fw-semibold"><%= s.getEmpleado() != null ? s.getEmpleado().getNombreCompleto() : "—"%></div></td>
+                                                <td><%= s.getArea() != null ? s.getArea().getNombreArea() : "—"%></td>
+                                                <td><small class="text-muted"><%= s.getFechaSolicitud() != null ? s.getFechaSolicitud().toString().replace("T", " ").substring(0, 16) : "—"%></small></td>
                                                 <td class="text-center"><span class="badge <%= badgeClass%>"><%= s.getEstadoSolicitud()%></span></td>
                                                 <td><small><%= s.getDescripcion() != null ? s.getDescripcion() : ""%></small></td>
                                                 <td class="text-center">
@@ -199,11 +195,11 @@
                                                        class="btn btn-sm btn-outline-primary me-1"><i class="fas fa-edit"></i></a>
                                                     <a href="${pageContext.request.contextPath}/SolicitudServlet?accion=eliminar&id=<%= s.getIdSolicitud()%>"
                                                        class="btn btn-sm btn-outline-danger"
-                                                       onclick="return confirm('Â¿Eliminar solicitud #<%= s.getIdSolicitud()%>?')"><i class="fas fa-trash"></i></a>
+                                                       onclick="return confirm('¿Eliminar solicitud #<%= s.getIdSolicitud()%>?')"><i class="fas fa-trash"></i></a>
                                                 </td>
                                             </tr>
                                             <% }
-                        } else { %>
+                                            } else { %>
                                             <tr><td colspan="7" class="text-center py-5 text-muted">
                                                     <i class="fas fa-clipboard-list fa-3x mb-3 d-block"></i>No hay solicitudes registradas
                                                 </td></tr>
@@ -217,4 +213,20 @@
                 </div>
             </div></div>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+        <script>
+                                                           // Validación Frontend con Bootstrap
+                                                           (() => {
+                                                               'use strict'
+                                                               const forms = document.querySelectorAll('.needs-validation')
+                                                               Array.from(forms).forEach(form => {
+                                                                   form.addEventListener('submit', event => {
+                                                                       if (!form.checkValidity()) {
+                                                                           event.preventDefault()
+                                                                           event.stopPropagation()
+                                                                       }
+                                                                       form.classList.add('was-validated')
+                                                                   }, false)
+                                                               })
+                                                           })()
+        </script>
     </body></html>

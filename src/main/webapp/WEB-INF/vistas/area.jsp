@@ -59,52 +59,51 @@
             Empleado sesion = (Empleado) session.getAttribute("empleado");
             List<Areatrabajo> areas = (List<Areatrabajo>) request.getAttribute("areas");
             Areatrabajo areaEditar = (Areatrabajo) request.getAttribute("areaEditar");
+            String errorBackend = (String) request.getAttribute("error");
+        %>
+        <%
+            boolean esAdmin = sesion != null && ("Gerente Compras".equals(sesion.getCargo())
+                    || "Administrador".equals(sesion.getCargo())
+                    || "admin".equalsIgnoreCase(sesion.getUsername()));
         %>
         <div class="container-fluid p-0">
             <div class="row g-0">
-                <!-- SIDEBAR -->
-                <div class="col-md-3 col-lg-2 sidebar">
-                    <div class="p-3 border-bottom border-secondary border-opacity-25">
-                        <div class="d-flex align-items-center gap-2"><span style="font-size:22px">🛡️</span>
-                            <div><div class="fw-bold" style="font-size:14px">Hermes</div><div style="font-size:11px;opacity:.6">Inventario</div></div>
-                        </div>
-                    </div>
-                    <nav class="pt-2"><ul class="nav flex-column">
-                            <li><a href="${pageContext.request.contextPath}/MenuServlet" class="nav-link"><i class="fas fa-home me-2"></i>Inicio</a></li>
-                            <div class="nav-section">Inventario</div>
-                            <li><a href="${pageContext.request.contextPath}/ArticuloServlet?accion=listar" class="nav-link"><i class="fas fa-boxes me-2"></i>Artículos</a></li>
-                            <li><a href="${pageContext.request.contextPath}/AreaTrabajoServlet?accion=listar" class="nav-link active"><i class="fas fa-building me-2"></i>Áreas</a></li>
-                            <div class="nav-section">Compras</div>
-                            <li><a href="${pageContext.request.contextPath}/SolicitudServlet?accion=listar" class="nav-link"><i class="fas fa-clipboard-list me-2"></i>Solicitudes</a></li>
-                            <li><a href="${pageContext.request.contextPath}/OrdenCompraServlet?accion=listar" class="nav-link"><i class="fas fa-shopping-cart me-2"></i>Órdenes OC</a></li>
-                            <li><a href="${pageContext.request.contextPath}/ConformidadServlet?accion=listar" class="nav-link"><i class="fas fa-check-circle me-2"></i>Conformidad</a></li>
-                            <div class="nav-section">Administración</div>
-                            <li><a href="${pageContext.request.contextPath}/EmpleadoServlet?accion=listar" class="nav-link"><i class="fas fa-users me-2"></i>Empleados</a></li>
-                            <li><a href="${pageContext.request.contextPath}/ProveedorServlet?accion=listar" class="nav-link"><i class="fas fa-truck me-2"></i>Proveedores</a></li>
-                            <div class="nav-section mt-2"></div>
-                            <li><a href="${pageContext.request.contextPath}/LogoutServlet" class="nav-link text-danger"><i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión</a></li>
-                        </ul></nav>
-                </div>
-                <!-- MAIN -->
+
+                <jsp:include page="/WEB-INF/vistas/sidebar.jsp" />
+
                 <div class="col-md-9 col-lg-10 main-content">
                     <div class="topbar d-flex justify-content-between align-items-center">
                         <div><h6 class="mb-0 fw-bold"><i class="fas fa-building me-2 text-primary"></i>Áreas de Trabajo</h6>
                             <small class="text-muted">Gestión de sedes y áreas de la empresa</small></div>
                         <small class="text-muted"><i class="fas fa-user me-1"></i><%= sesion != null ? sesion.getNombreCompleto() : ""%></small>
                     </div>
+
                     <div class="p-4">
-                        <!-- FORMULARIO -->
+
+                        <% if (errorBackend != null) {%>
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i> <%= errorBackend%>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                        <% }%>
+
                         <div class="card card-modern mb-4">
                             <div class="card-header bg-white py-3">
                                 <h5 class="mb-0"><i class="fas fa-<%= areaEditar != null ? "edit" : "plus-circle"%> me-2 text-primary"></i><%= areaEditar != null ? "Editar Área" : "Nueva Área de Trabajo"%></h5>
                             </div>
                             <div class="card-body">
-                                <form action="${pageContext.request.contextPath}/AreaTrabajoServlet" method="post" class="row g-3 align-items-end">
+                                <form action="${pageContext.request.contextPath}/AreaTrabajoServlet" method="post" class="row g-3 align-items-end needs-validation" novalidate>
                                     <input type="hidden" name="accion" value="<%= areaEditar != null ? "actualizar" : "guardar"%>"/>
                                     <% if (areaEditar != null) {%><input type="hidden" name="idArea" value="<%= areaEditar.getIdArea()%>"/><% }%>
                                     <div class="col-md-6">
                                         <label class="form-label fw-semibold">Nombre del Área</label>
-                                        <input type="text" name="nombreArea" class="form-control" value="<%= areaEditar != null ? areaEditar.getNombreArea() : ""%>" placeholder="Ej: Almacén Central" required>
+                                        <input type="text" name="nombreArea" class="form-control" 
+                                               value="<%= areaEditar != null ? areaEditar.getNombreArea() : ""%>" 
+                                               placeholder="Ej: Almacén Central" 
+                                               required minlength="3" maxlength="50" pattern="^[a-zA-ZÁ-ÿ\s\-]+$">
+                                        <div class="invalid-feedback">
+                                            El nombre debe tener entre 3 y 50 caracteres. Solo se permiten letras, espacios y guiones.
+                                        </div>
                                     </div>
                                     <% if (areaEditar != null) {%>
                                     <div class="col-md-2 d-flex align-items-end pb-1">
@@ -123,7 +122,6 @@
                                 </form>
                             </div>
                         </div>
-                        <!-- TABLA -->
                         <div class="card card-modern">
                             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                                 <h5 class="mb-0"><i class="fas fa-list me-2 text-primary"></i>Listado de Áreas</h5>
@@ -135,7 +133,7 @@
                                         <thead class="bg-light"><tr><th class="px-4">#</th><th>Nombre</th><th class="text-center">Estado</th><th class="text-center">Acciones</th></tr></thead>
                                         <tbody>
                                             <% if (areas != null && !areas.isEmpty()) {
-                                for (Areatrabajo a : areas) {%>
+                                                    for (Areatrabajo a : areas) {%>
                                             <tr>
                                                 <td class="px-4 fw-semibold text-primary">#<%= a.getIdArea()%></td>
                                                 <td class="fw-semibold"><%= a.getNombreArea()%></td>
@@ -146,7 +144,7 @@
                                                 </td>
                                             </tr>
                                             <% }
-                        } else { %>
+                                            } else { %>
                                             <tr><td colspan="4" class="text-center py-5 text-muted"><i class="fas fa-building fa-3x mb-3 d-block"></i>No hay áreas registradas</td></tr>
                                             <% }%>
                                         </tbody>
@@ -159,4 +157,21 @@
             </div>
         </div>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    </body></html>
+        <script>
+                                                        // Validación Frontend con Bootstrap
+                                                        (() => {
+                                                            'use strict'
+                                                            const forms = document.querySelectorAll('.needs-validation')
+                                                            Array.from(forms).forEach(form => {
+                                                                form.addEventListener('submit', event => {
+                                                                    if (!form.checkValidity()) {
+                                                                        event.preventDefault()
+                                                                        event.stopPropagation()
+                                                                    }
+                                                                    form.classList.add('was-validated')
+                                                                }, false)
+                                                            })
+                                                        })()
+        </script>
+    </body>
+</html>
