@@ -90,14 +90,22 @@
 
                                     <div class="col-md-3">
                                         <label class="form-label fw-semibold">RUC</label>
-                                        <input type="text" name="ruc" class="form-control"
+                                        
+                                        <div class="input-group">
+                                            <input type="text" name="ruc" class="form-control" id="rucInput"
                                                value="<%= proveedorEditar != null ? proveedorEditar.getRuc() : ""%>"
                                                maxlength="11" pattern="^(10|20)[0-9]{9}$" placeholder="10... o 20..." required>
+                                        	<button class="btn btn-outline-primary" type="button" id="btnBuscarRuc" title="Consultar Ruc">
+                                                <i class="fas fa-search"></i>
+                                            </button>
+                                        </div>
+                                        
                                         <div class="invalid-feedback">Debe contener 11 dígitos y empezar con 10 o 20.</div>
                                     </div>
+                                    
                                     <div class="col-md-4">
                                         <label class="form-label fw-semibold">Razón Social</label>
-                                        <input type="text" name="razonSocial" class="form-control"
+                                        <input type="text" name="razonSocial" class="form-control" id="razonSocialInput"
                                                value="<%= proveedorEditar != null ? proveedorEditar.getRazonSocial() : ""%>" required>
                                         <div class="invalid-feedback">La razón social es obligatoria.</div>
                                     </div>
@@ -184,21 +192,64 @@
                     </div>
                 </div>
             </div></div>
+            
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>    
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
         <script>
-                                                           // Validación Frontend con Bootstrap
-                                                           (() => {
-                                                               'use strict'
-                                                               const forms = document.querySelectorAll('.needs-validation')
-                                                               Array.from(forms).forEach(form => {
-                                                                   form.addEventListener('submit', event => {
-                                                                       if (!form.checkValidity()) {
-                                                                           event.preventDefault()
-                                                                           event.stopPropagation()
-                                                                       }
-                                                                       form.classList.add('was-validated')
-                                                                   }, false)
-                                                               })
-                                                           })()
+        
+        // Validación Frontend con Bootstrap
+		(() => {
+		    'use strict'
+		    const forms = document.querySelectorAll('.needs-validation')
+		    Array.from(forms).forEach(form => {
+		        form.addEventListener('submit', event => {
+		            if (!form.checkValidity()) {
+		                event.preventDefault()
+		                event.stopPropagation()
+		            }
+		            form.classList.add('was-validated')
+		        }, false)
+		    })
+		})()
+		
+		    // Lógica AJAX para Consulta de RUC a la API (peruapi.com)
+            document.addEventListener('DOMContentLoaded', function () {
+                const btnBuscarRuc = document.getElementById('btnBuscarRuc');
+                
+                if (btnBuscarRuc) {
+                	btnBuscarRuc.addEventListener('click', function () {
+                        const rucValue = document.getElementById('rucInput').value;
+                        
+                        if (rucValue.length === 11 && /^\d{11}$/.test(rucValue)) {
+                            // Cambiar ícono a un spinner de carga para UX
+                            const icon = this.querySelector('i');
+                            icon.className = 'fas fa-spinner fa-spin';
+                            
+                            fetch('${pageContext.request.contextPath}/ProveedorServlet?accion=consultarRuc&ruc=' + rucValue, {
+                                method: 'POST'
+                            })
+                            .then(response => {
+                                if (!response.ok) {
+                                    throw new Error('RUC no encontrado');
+                                }
+                                return response.json();
+                            })
+                            .then(data => {
+                                let razonSocial = data.razon_social || (data.data.razon_social)
+                                
+                                if (razonSocial) document.getElementById('razonSocialInput').value = razonSocial;
+                            })
+                            .catch(error => {
+                                Swal.fire({icon: 'warning', title: 'Aviso', text: 'No se pudo encontrar información para este RUC.'});
+                            })
+                            .finally(() => {
+                                icon.className = 'fas fa-search';
+                            });
+                        } else {
+                            Swal.fire({icon: 'warning', title: 'Formato incorrecto', text: 'Por favor, ingrese un RUC válido de 11 dígitos.'});
+                        }
+                    });
+                }
+            });
         </script>
     </body></html>

@@ -1,6 +1,8 @@
 package controlador;
 
 import modelo.*;
+import servicios.PeruApiService;
+
 import javax.servlet.*;
 import javax.servlet.http.*;
 import java.io.IOException;
@@ -13,27 +15,37 @@ public class ProveedorServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        if (!verificarSesion(request, response)) {
-            return;
-        }
+        if (!verificarSesion(request, response)) return;
 
         String accion = request.getParameter("accion");
         ProveedorDAO dao = new ProveedorDAO();
 
         try {
+
             if (accion == null || accion.equals("listar")) {
+
                 request.setAttribute("proveedores", dao.listar());
-                request.getRequestDispatcher("/WEB-INF/vistas/proveedor.jsp").forward(request, response);
+                request.getRequestDispatcher("/WEB-INF/vistas/proveedor.jsp")
+                        .forward(request, response);
 
             } else if (accion.equals("editar")) {
-                request.setAttribute("proveedorEditar", dao.buscar(Integer.parseInt(request.getParameter("id"))));
+
+                int id = Integer.parseInt(request.getParameter("id"));
+
+                request.setAttribute("proveedorEditar", dao.buscar(id));
                 request.setAttribute("proveedores", dao.listar());
-                request.getRequestDispatcher("/WEB-INF/vistas/proveedor.jsp").forward(request, response);
+
+                request.getRequestDispatcher("/WEB-INF/vistas/proveedor.jsp")
+                        .forward(request, response);
 
             } else if (accion.equals("eliminar")) {
-                dao.eliminar(Integer.parseInt(request.getParameter("id")));
+
+                int id = Integer.parseInt(request.getParameter("id"));
+                dao.eliminar(id);
+
                 response.sendRedirect("ProveedorServlet?accion=listar");
             }
+
         } finally {
             dao.close();
         }
@@ -43,70 +55,125 @@ public class ProveedorServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        if (!verificarSesion(request, response)) {
+        if (!verificarSesion(request, response)) return;
+
+        request.setCharacterEncoding("UTF-8");
+
+        String accion = request.getParameter("accion");
+
+        // ==============================
+        // CONSULTA API RUC (AJAX)
+        // ==============================
+        if ("consultarRuc".equals(accion)) {
+
+            String ruc = request.getParameter("ruc");
+
+            PeruApiService api = new PeruApiService();
+            String resultado = api.consultarRuc(ruc);
+
+            if (resultado != null) {
+                response.setContentType("application/json");
+                response.setCharacterEncoding("UTF-8");
+                response.getWriter().write(resultado);
+            } else {
+                response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            }
             return;
         }
 
-        request.setCharacterEncoding("UTF-8");
-        String accion = request.getParameter("accion");
         ProveedorDAO dao = new ProveedorDAO();
 
         try {
-            if (accion != null && (accion.equals("guardar") || accion.equals("actualizar"))) {
+
+            if (accion != null &&
+                    (accion.equals("guardar") || accion.equals("actualizar"))) {
+
                 String ruc = request.getParameter("ruc");
                 String correo = request.getParameter("correoProveedor");
 
-                // Validación de formato de RUC
+                // ==============================
+                // VALIDACIÓN RUC
+                // ==============================
                 if (ruc == null || !ruc.matches("^(10|20)[0-9]{9}$")) {
-                    enviarErrorYRetornar(request, response, dao, accion, "Error: El RUC debe contener exactamente 11 dígitos y empezar con 10 o 20.");
+                    enviarErrorYRetornar(request, response, dao, accion,
+                            "Error: El RUC debe tener 11 dígitos y empezar con 10 o 20.");
                     return;
                 }
 
-                // Validación de formato de correo
-                if (correo != null && !correo.trim().isEmpty() && !validarFormatoCorreo(correo)) {
-                    enviarErrorYRetornar(request, response, dao, accion, "Error: El formato del correo electrónico ingresado no es válido.");
+                // ==============================
+                // VALIDACIÓN CORREO
+                // ==============================
+                if (correo != null && !correo.trim().isEmpty()
+                        && !validarFormatoCorreo(correo)) {
+
+                    enviarErrorYRetornar(request, response, dao, accion,
+                            "Error: El formato del correo no es válido.");
                     return;
                 }
 
-                // Validación de duplicados
-                boolean duplicadoRUC = false;
+                // ==============================
+                // VALIDACIÓN DUPLICADO RUC
+                // ==============================
                 List<Proveedor> existentes = dao.listar();
+                boolean duplicado = false;
+
+                int idActual = 0;
+                if ("actualizar".equals(accion)) {
+                    idActual = Integer.parseInt(request.getParameter("idProveedor"));
+                }
 
                 for (Proveedor p : existentes) {
-                    if (accion.equals("actualizar") && p.getIdProveedor() == Integer.parseInt(request.getParameter("idProveedor"))) {
-                        continue;
-                    }
-                    if (p.getRuc().equals(ruc)) {
-                        duplicadoRUC = true;
+                    if (p.getRuc().equals(ruc) && p.getIdProveedor() != idActual) {
+                        duplicado = true;
                         break;
                     }
                 }
 
-                if (duplicadoRUC) {
-                    enviarErrorYRetornar(request, response, dao, accion, "Error: Ya existe un proveedor registrado con el RUC " + ruc + ".");
+                if (duplicado) {
+                    enviarErrorYRetornar(request, response, dao, accion,
+                            "Error: Ya existe un proveedor con ese RUC.");
                     return;
                 }
             }
 
+            // ==============================
+            // CREAR / ACTUALIZAR OBJETO
+            // ==============================
             Proveedor p;
-            if (accion.equals("actualizar")) {
-                p = dao.buscar(Integer.parseInt(request.getParameter("idProveedor")));
+
+            if ("actualizar".equals(accion)) {
+                int id = Integer.parseInt(request.getParameter("idProveedor"));
+                p = dao.buscar(id);
             } else {
                 p = new Proveedor();
             }
 
             p.setRuc(request.getParameter("ruc"));
             p.setRazonSocial(request.getParameter("razonSocial").trim());
-            p.setContacto(request.getParameter("contacto") != null ? request.getParameter("contacto").trim() : "");
-            p.setCorreoProveedor(request.getParameter("correoProveedor") != null ? request.getParameter("correoProveedor").trim() : "");
-            p.setEstado(request.getParameter("estado") != null);
 
-            if (accion.equals("actualizar")) {
+            p.setContacto(
+                    request.getParameter("contacto") != null
+                            ? request.getParameter("contacto").trim()
+                            : null
+            );
+
+            p.setCorreoProveedor(
+                    request.getParameter("correoProveedor") != null
+                            ? request.getParameter("correoProveedor").trim()
+                            : null
+            );
+
+            p.setEstado(true);
+
+            // ==============================
+            // GUARDAR / ACTUALIZAR
+            // ==============================
+            if ("actualizar".equals(accion)) {
                 dao.actualizar(p);
             } else {
-                p.setEstado(true);
                 dao.guardar(p);
             }
+
             response.sendRedirect("ProveedorServlet?accion=listar");
 
         } finally {
@@ -114,30 +181,49 @@ public class ProveedorServlet extends HttpServlet {
         }
     }
 
-    // --- MÉTODOS AUXILIARES ---
+    // ==============================
+    // VALIDAR CORREO
+    // ==============================
     private boolean validarFormatoCorreo(String correo) {
         String regex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$";
         return Pattern.matches(regex, correo);
     }
 
-    private void enviarErrorYRetornar(HttpServletRequest request, HttpServletResponse response, ProveedorDAO dao, String accion, String mensajeError) throws ServletException, IOException {
+    // ==============================
+    // MANEJO DE ERRORES
+    // ==============================
+    private void enviarErrorYRetornar(HttpServletRequest request,
+                                       HttpServletResponse response,
+                                       ProveedorDAO dao,
+                                       String accion,
+                                       String mensajeError)
+            throws ServletException, IOException {
+
         request.setAttribute("error", mensajeError);
         request.setAttribute("proveedores", dao.listar());
 
-        if (accion.equals("actualizar")) {
-            Proveedor p = dao.buscar(Integer.parseInt(request.getParameter("idProveedor")));
-            request.setAttribute("proveedorEditar", p);
+        if ("actualizar".equals(accion)) {
+            int id = Integer.parseInt(request.getParameter("idProveedor"));
+            request.setAttribute("proveedorEditar", dao.buscar(id));
         }
 
-        request.getRequestDispatcher("/WEB-INF/vistas/proveedor.jsp").forward(request, response);
+        request.getRequestDispatcher("/WEB-INF/vistas/proveedor.jsp")
+                .forward(request, response);
     }
 
-    private boolean verificarSesion(HttpServletRequest req, HttpServletResponse res) throws IOException {
-        HttpSession s = req.getSession(false);
-        if (s == null || s.getAttribute("empleado") == null) {
+    // ==============================
+    // VALIDAR SESIÓN
+    // ==============================
+    private boolean verificarSesion(HttpServletRequest req, HttpServletResponse res)
+            throws IOException {
+
+        HttpSession session = req.getSession(false);
+
+        if (session == null || session.getAttribute("empleado") == null) {
             res.sendRedirect("LoginServlet");
             return false;
         }
+
         return true;
     }
 }

@@ -33,9 +33,9 @@ public class Ordencompra {
     @Column(name = "descripcion")
     private String descripcion;
 
-    // Flag para saber si fue generada automáticamente
+    // SOLUCIÓN: Usamos la clase Boolean en lugar del primitivo boolean
     @Column(name = "es_automatica")
-    private boolean esAutomatica = false;
+    private Boolean esAutomatica = false;
 
     @PrePersist
     public void prePersist() {
@@ -59,6 +59,7 @@ public class Ordencompra {
     public void setEstadoOc(String v)               { this.estadoOc = v; }
     public String getDescripcion()                  { return descripcion; }
     public void setDescripcion(String v)            { this.descripcion = v; }
-    public boolean isEsAutomatica()                 { return esAutomatica; }
-    public void setEsAutomatica(boolean v)          { this.esAutomatica = v; }
+    public Boolean getEsAutomatica()                { return esAutomatica; }
+    public void setEsAutomatica(Boolean v)          { this.esAutomatica = v; }
+    public boolean isEsAutomatica()                 { return esAutomatica != null ? esAutomatica : false; }
 }

@@ -6,53 +6,14 @@
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
         <style>
-            .sidebar{
-                background:linear-gradient(180deg,#1a3a5c 0%,#0f2340 100%);
-                min-height:100vh;
-                color:white
-            }
-            .sidebar .nav-link{
-                color:rgba(255,255,255,.75);
-                padding:10px 20px;
-                border-radius:8px;
-                margin:2px 8px;
-                transition:.2s;
-                font-size:14px
-            }
-            .sidebar .nav-link:hover,.sidebar .nav-link.active{
-                background:rgba(255,255,255,.12);
-                color:white
-            }
-            .sidebar .nav-section{
-                font-size:10px;
-                text-transform:uppercase;
-                letter-spacing:1px;
-                color:rgba(255,255,255,.4);
-                padding:12px 20px 4px
-            }
-            .main-content{
-                background:#f1f5f9;
-                min-height:100vh
-            }
-            .topbar{
-                background:white;
-                padding:12px 24px;
-                border-bottom:1px solid #e2e8f0
-            }
-            .card-modern{
-                border:none;
-                border-radius:12px;
-                box-shadow:0 2px 8px rgba(0,0,0,.07)
-            }
-            .badge-auto {
-                background: #dbeafe;
-                color: #1d4ed8;
-                font-size: 10px;
-                padding: 2px 6px;
-                border-radius: 99px;
-                font-weight: 600;
-                vertical-align: middle;
-            }
+            .sidebar{ background:linear-gradient(180deg,#1a3a5c 0%,#0f2340 100%); min-height:100vh; color:white }
+            .sidebar .nav-link{ color:rgba(255,255,255,.75); padding:10px 20px; border-radius:8px; margin:2px 8px; transition:.2s; font-size:14px }
+            .sidebar .nav-link:hover,.sidebar .nav-link.active{ background:rgba(255,255,255,.12); color:white }
+            .sidebar .nav-section{ font-size:10px; text-transform:uppercase; letter-spacing:1px; color:rgba(255,255,255,.4); padding:12px 20px 4px }
+            .main-content{ background:#f1f5f9; min-height:100vh }
+            .topbar{ background:white; padding:12px 24px; border-bottom:1px solid #e2e8f0 }
+            .card-modern{ border:none; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,.07) }
+            .badge-auto { background: #dbeafe; color: #1d4ed8; font-size: 10px; padding: 2px 6px; border-radius: 99px; font-weight: 600; vertical-align: middle; }
         </style>
     </head><body>
         <%
@@ -62,13 +23,13 @@
             List<Proveedor> proveedores = (List<Proveedor>) request.getAttribute("proveedores");
             Ordencompra ordenEditar = (Ordencompra) request.getAttribute("ordenEditar");
             String errorBackend = (String) request.getAttribute("error");
-            String[] estadosOC = {"Borrador", "Conforme", "Autorizada", "Enviada", "Rechazada"};
-        %>
-        <%
+            String[] estadosOC = {"Borrador", "En Revisión", "Conforme", "Autorizada", "Enviada", "Rechazada"};
+            
             boolean esAdmin = sesion != null && ("Gerente Compras".equals(sesion.getCargo())
                     || "Administrador".equals(sesion.getCargo())
                     || "admin".equalsIgnoreCase(sesion.getUsername()));
         %>
+        
         <div class="container-fluid p-0"><div class="row g-0">
 
                 <jsp:include page="/WEB-INF/vistas/sidebar.jsp" />
@@ -81,7 +42,6 @@
                     </div>
                     <div class="p-4">
 
-                        <%-- ── ERROR BACKEND ── --%>
                         <% if (errorBackend != null) {%>
                         <div class="alert alert-danger alert-dismissible fade show" role="alert">
                             <i class="fas fa-exclamation-triangle me-2"></i> <%= errorBackend%>
@@ -89,7 +49,6 @@
                         </div>
                         <% }%>
 
-                        <%-- ── FORMULARIO NUEVA / EDITAR OC ── --%>
                         <div class="card card-modern mb-4">
                             <div class="card-header bg-white py-3">
                                 <h5 class="mb-0">
@@ -104,7 +63,6 @@
                                     <input type="hidden" name="idOrden" value="<%= ordenEditar.getIdOrden()%>"/>
                                     <% } %>
 
-                                    <%-- Artículo que originó la OC --%>
                                     <div class="col-md-4">
                                         <label class="form-label fw-semibold">
                                             Artículo en Alerta
@@ -116,7 +74,7 @@
                                         <div class="form-text text-muted">Se completa automáticamente al detectar stock bajo.</div>
                                     </div>
 
-                                    <div class="col-md-4">
+                                    <div class="col-md-3">
                                         <label class="form-label fw-semibold">Proveedor</label>
                                         <select name="idProveedor" class="form-select" required>
                                             <option value="">— Seleccionar —</option>
@@ -132,47 +90,66 @@
 
                                     <div class="col-md-2">
                                         <label class="form-label fw-semibold">Estado OC</label>
-                                        <select name="estadoOc" class="form-select" required>
-                                            <% for (String est : estadosOC) {
-                                                boolean sel = ordenEditar != null && est.equals(ordenEditar.getEstadoOc());%>
-                                            <option value="<%= est%>" <%= sel ? "selected" : ""%>><%= est%></option>
-                                            <% }%>
-                                        </select>
+                                        <% if (ordenEditar == null) { %>
+                                            <input type="text" class="form-control" value="En Revisión" disabled>
+                                            <input type="hidden" name="estadoOc" value="En Revisión">
+                                        <% } else { %>
+                                            <select name="estadoOc" class="form-select" required>
+                                                <% for (String est : estadosOC) {
+                                                    boolean sel = est.equals(ordenEditar.getEstadoOc());%>
+                                                <option value="<%= est%>" <%= sel ? "selected" : ""%>><%= est%></option>
+                                                <% }%>
+                                            </select>
+                                        <% } %>
                                     </div>
 
-                                    <div class="col-md-3">
-                                        <label class="form-label fw-semibold">Analista de Compras</label>
-                                        <select name="idAnalista" class="form-select">
-                                            <option value="">— Sin asignar —</option>
-                                            <% if (empleados != null) {
-                                                for (Empleado e : empleados) {
-                                                    boolean sel = ordenEditar != null && ordenEditar.getAnalista() != null
-                                                            && ordenEditar.getAnalista().getIdEmpleado() == e.getIdEmpleado();%>
-                                            <option value="<%= e.getIdEmpleado()%>" <%= sel ? "selected" : ""%>><%= e.getNombreCompleto()%></option>
-                                            <% }} %>
-                                        </select>
-                                    </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label fw-semibold">Analista de Compras</label>
+                                            <select class="form-select" disabled>
+                                                <%
+                                                    int analistaFijo = 0;
+                                                    if (empleados != null) {
+                                                        for (Empleado e : empleados) {
+                                                            // CORRECCIÓN: Usamos .toLowerCase().contains("analista")
+                                                            boolean sel = ordenEditar != null && ordenEditar.getAnalista() != null
+                                                                    ? ordenEditar.getAnalista().getIdEmpleado() == e.getIdEmpleado()
+                                                                    : (e.getCargo() != null && e.getCargo().toLowerCase().contains("analista") || analistaFijo == 0);
+
+                                                            if (sel)
+                                                                analistaFijo = e.getIdEmpleado();
+                                                %>
+                                                <option value="<%= e.getIdEmpleado()%>" <%= sel ? "selected" : ""%>><%= e.getNombreCompleto()%></option>
+                                                <% }
+                                                }%>
+                                            </select>
+                                            <input type="hidden" name="idAnalista" value="<%= analistaFijo%>">
+                                        </div>
 
                                     <div class="col-md-3">
                                         <label class="form-label fw-semibold">Gerente de Compras</label>
-                                        <select name="idGerente" class="form-select">
-                                            <option value="">— Sin asignar —</option>
-                                            <% if (empleados != null) {
+                                        <select class="form-select" disabled>
+                                            <% 
+                                            int gerenteFijo = 0;
+                                            if (empleados != null) {
                                                 for (Empleado e : empleados) {
-                                                    boolean sel = ordenEditar != null && ordenEditar.getGerente() != null
-                                                            && ordenEditar.getGerente().getIdEmpleado() == e.getIdEmpleado();%>
+                                                    boolean sel = ordenEditar != null && ordenEditar.getGerente() != null 
+                                                                ? ordenEditar.getGerente().getIdEmpleado() == e.getIdEmpleado() 
+                                                                : (e.getCargo() != null && e.getCargo().contains("Gerente") || gerenteFijo == 0);
+                                                    if(sel) gerenteFijo = e.getIdEmpleado();
+                                            %>
                                             <option value="<%= e.getIdEmpleado()%>" <%= sel ? "selected" : ""%>><%= e.getNombreCompleto()%></option>
                                             <% }} %>
                                         </select>
+                                        <input type="hidden" name="idGerente" value="<%= gerenteFijo %>">
                                     </div>
 
-                                    <div class="col-md-2 d-flex align-items-end">
+                                    <div class="col-md-2 d-flex align-items-end mt-4">
                                         <button type="submit" class="btn btn-primary w-100">
                                             <i class="fas fa-save me-1"></i><%= ordenEditar != null ? "Actualizar" : "Crear OC"%>
                                         </button>
                                     </div>
                                     <% if (ordenEditar != null) { %>
-                                    <div class="col-md-2 d-flex align-items-end">
+                                    <div class="col-md-2 d-flex align-items-end mt-4">
                                         <a href="${pageContext.request.contextPath}/OrdenCompraServlet?accion=listar" class="btn btn-secondary w-100">Cancelar</a>
                                     </div>
                                     <% }%>
@@ -180,7 +157,6 @@
                             </div>
                         </div>
 
-                        <%-- ── TABLA DE ÓRDENES ── --%>
                         <div class="card card-modern">
                             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                                 <h5 class="mb-0"><i class="fas fa-list me-2 text-primary"></i>Listado de Órdenes de Compra</h5>
@@ -210,6 +186,7 @@
                                                         case "Rechazada":  badgeClass = "bg-danger";            break;
                                                         case "Enviada":    badgeClass = "bg-info";              break;
                                                         case "Conforme":   badgeClass = "bg-warning text-dark"; break;
+                                                        case "En Revisión":badgeClass = "bg-primary text-white"; break;
                                                         default:           badgeClass = "bg-secondary";
                                                     }
                                                     boolean esAutomatica = o.getDescripcion() != null && !o.getDescripcion().isEmpty();
