@@ -29,6 +29,9 @@ public class Ordencompra {
 
     @Column(name = "estado_oc")
     private String estadoOc = "Borrador";
+    
+    @Column(name = "descripcion")
+    private String descripcion;
 
     @PrePersist
     public void prePersist() {
@@ -50,4 +53,6 @@ public class Ordencompra {
     public void setProveedor(Proveedor v)           { this.proveedor = v; }
     public String getEstadoOc()                     { return estadoOc; }
     public void setEstadoOc(String v)               { this.estadoOc = v; }
+    public String getDescripcion()                  { return descripcion; }
+    public void setDescripcion(String v)            { this.descripcion = v; }
 }

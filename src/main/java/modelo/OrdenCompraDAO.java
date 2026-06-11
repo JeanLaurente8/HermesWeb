@@ -36,6 +36,16 @@ public class OrdenCompraDAO {
         if (o != null) em.remove(o);
         em.getTransaction().commit();
     }
+    
+    public boolean existeOCBorradorParaArticulo(String nombreArticulo) {
+        Long count = em.createQuery(
+                "SELECT COUNT(o) FROM Ordencompra o WHERE o.estadoOc = 'Borrador' "
+                + "AND o.descripcion = :nombre",
+                Long.class)
+                .setParameter("nombre", nombreArticulo)
+                .getSingleResult();
+        return count > 0;
+    }
  
     public void close() {
         if (em != null && em.isOpen()) em.close();

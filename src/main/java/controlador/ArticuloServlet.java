@@ -52,19 +52,18 @@ public class ArticuloServlet extends HttpServlet {
         ArticuloDAO dao = new ArticuloDAO();
 
         try {
-            // Validaciones Estrictas Backend
+            // ── VALIDACIONES ──────────────────────────────────────────
             if (accion != null && (accion.equals("guardar") || accion.equals("actualizar"))) {
 
-                // Validar formato (admite números, letras, espacios y guiones)
                 if (!esNombreArticuloValido(nombre)) {
-                    enviarErrorYRetornar(request, response, dao, accion, "Error: El nombre del artículo tiene un formato inválido. Solo se admiten letras, números, espacios y guiones.");
+                    enviarErrorYRetornar(request, response, dao, accion,
+                            "Error: El nombre del artículo tiene un formato inválido. "
+                            + "Solo se admiten letras, números, espacios y guiones.");
                     return;
                 }
 
-                // Validar duplicados en la lista actual
                 boolean esDuplicado = false;
                 List<Articulo> listaExistentes = dao.listar();
-
                 for (Articulo art : listaExistentes) {
                     if (art.getNombre().trim().equalsIgnoreCase(nombre.trim())) {
                         if (accion.equals("guardar")) {
@@ -81,53 +80,83 @@ public class ArticuloServlet extends HttpServlet {
                 }
 
                 if (esDuplicado) {
-                    enviarErrorYRetornar(request, response, dao, accion, "Error: Ya existe un artículo registrado con el nombre '" + nombre + "'.");
+                    enviarErrorYRetornar(request, response, dao, accion,
+                            "Error: Ya existe un artículo registrado con el nombre '" + nombre + "'.");
                     return;
                 }
             }
 
-            Articulo a;
+            // ── PARSEAR VALORES ───────────────────────────────────────
             String[] estadoVals = request.getParameterValues("estado");
             boolean estado = true;
             if (estadoVals != null && estadoVals.length > 0) {
                 estado = Boolean.parseBoolean(estadoVals[estadoVals.length - 1]);
             }
 
-            int stock = 0;
-            int stockLimite = 0;
+            int stock = 0, stockLimite = 0;
             try {
                 stock = Integer.parseInt(request.getParameter("stock"));
             } catch (NumberFormatException ex) {
-                stock = 0;
             }
             try {
                 stockLimite = Integer.parseInt(request.getParameter("stockLimite"));
             } catch (NumberFormatException ex) {
-                stockLimite = 0;
             }
 
+            // ── GUARDAR O ACTUALIZAR ──────────────────────────────────
+            Articulo a;
             if ("actualizar".equals(accion)) {
                 a = dao.buscar(Integer.parseInt(request.getParameter("idArticulo")));
                 if (a == null) {
                     response.sendRedirect("ArticuloServlet?accion=listar");
                     return;
                 }
-                a.setNombre(nombre.trim());
-                a.setDescripcion(request.getParameter("descripcion"));
-                a.setStock(stock);
-                a.setStockLimite(stockLimite);
-                a.setEstado(estado);
-                a.setRequiereCompra(request.getParameter("requiereCompra") != null);
-                dao.actualizar(a);
-            } else if ("guardar".equals(accion)) {
+            } else {
                 a = new Articulo();
-                a.setNombre(nombre.trim());
-                a.setDescripcion(request.getParameter("descripcion"));
-                a.setStock(stock);
-                a.setStockLimite(stockLimite);
-                a.setEstado(estado);
-                a.setRequiereCompra(request.getParameter("requiereCompra") != null);
+            }
+
+            a.setNombre(nombre.trim());
+            a.setDescripcion(request.getParameter("descripcion"));
+            a.setStock(stock);
+            a.setStockLimite(stockLimite);
+            a.setEstado(estado);
+            a.setRequiereCompra(stock <= stockLimite); // actualizar flag manualmente
+
+            if ("actualizar".equals(accion)) {
+                dao.actualizar(a);
+            } else {
                 dao.guardar(a);
+            }
+
+            // ── GENERACIÓN AUTOMÁTICA DE OC ───────────────────────────
+            // Si el stock quedó en alerta, generar OC automáticamente
+// ── GENERACIÓN AUTOMÁTICA DE OC ───────────────────────────
+            if (stock <= stockLimite) {
+                OrdenCompraDAO ocDAO = new OrdenCompraDAO();
+                try {
+                    // Solo generar si no existe ya una OC en Borrador para este artículo
+                    if (!ocDAO.existeOCBorradorParaArticulo(nombre.trim())) {
+                        Empleado analistaSession = (Empleado) request.getSession().getAttribute("empleado");
+
+                        Ordencompra oc = new Ordencompra();
+                        oc.setEstadoOc("Borrador");
+                        oc.setDescripcion(nombre.trim()); // guardar artículo que disparó la OC
+
+                        if (analistaSession != null
+                                && (analistaSession.getCargo().equals("Analista Compras")
+                                || analistaSession.getCargo().equals("Gerente Compras"))) {
+                            oc.setAnalista(analistaSession);
+                        }
+
+                        ocDAO.guardar(oc);
+
+                        request.getSession().setAttribute("ocGenerada",
+                                "Se generó automáticamente una Orden de Compra en Borrador "
+                                + "porque el artículo \"" + nombre.trim() + "\" bajó del stock límite.");
+                    }
+                } finally {
+                    ocDAO.close();
+                }
             }
 
             response.sendRedirect("ArticuloServlet?accion=listar");

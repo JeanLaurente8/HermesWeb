@@ -85,6 +85,7 @@ public class OrdenCompraServlet extends HttpServlet {
                 o = new Ordencompra();
             }
 
+            o.setDescripcion(request.getParameter("descripcion"));
             o.setEstadoOc(estadoOc);
 
             String idAnalista = request.getParameter("idAnalista");
