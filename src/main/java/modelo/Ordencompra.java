@@ -28,15 +28,19 @@ public class Ordencompra {
     private Proveedor proveedor;
 
     @Column(name = "estado_oc")
-    private String estadoOc = "Borrador";
-    
+    private String estadoOc = "En Revisión";
+
     @Column(name = "descripcion")
     private String descripcion;
+
+    // Flag para saber si fue generada automáticamente
+    @Column(name = "es_automatica")
+    private boolean esAutomatica = false;
 
     @PrePersist
     public void prePersist() {
         if (fechaGeneracion == null) fechaGeneracion = LocalDateTime.now();
-        if (estadoOc == null) estadoOc = "Borrador";
+        if (estadoOc == null) estadoOc = "En Revisión";
     }
 
     public Ordencompra() {}
@@ -55,4 +59,6 @@ public class Ordencompra {
     public void setEstadoOc(String v)               { this.estadoOc = v; }
     public String getDescripcion()                  { return descripcion; }
     public void setDescripcion(String v)            { this.descripcion = v; }
+    public boolean isEsAutomatica()                 { return esAutomatica; }
+    public void setEsAutomatica(boolean v)          { this.esAutomatica = v; }
 }

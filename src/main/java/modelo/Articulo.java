@@ -23,6 +23,13 @@ public class Articulo {
     @Column(name = "stock_limite")
     private int stockLimite;
 
+    @Column(name = "precio")
+    private double precio;
+
+    @ManyToOne
+    @JoinColumn(name = "id_proveedor")
+    private Proveedor proveedor;
+
     @Column(name = "requiere_compra")
     private boolean requiereCompra;
 
@@ -41,6 +48,10 @@ public class Articulo {
     public void setStock(int v)                 { this.stock = v; }
     public int getStockLimite()                 { return stockLimite; }
     public void setStockLimite(int v)           { this.stockLimite = v; }
+    public double getPrecio()                   { return precio; }
+    public void setPrecio(double v)             { this.precio = v; }
+    public Proveedor getProveedor()             { return proveedor; }
+    public void setProveedor(Proveedor v)       { this.proveedor = v; }
     public boolean isRequiereCompra()           { return requiereCompra; }
     public void setRequiereCompra(boolean v)    { this.requiereCompra = v; }
     public boolean isEstado()                   { return estado; }
