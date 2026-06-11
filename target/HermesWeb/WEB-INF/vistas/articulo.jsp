@@ -80,6 +80,12 @@
                     }
                 }
             }
+
+            // Leer y limpiar la notificación de OC generada automáticamente
+            String ocGenerada = (String) session.getAttribute("ocGenerada");
+            if (ocGenerada != null) {
+                session.removeAttribute("ocGenerada");
+            }
         %>
 
         <div class="container-fluid p-0"><div class="row g-0">
@@ -97,6 +103,23 @@
                     </div>
                     <div class="p-4">
 
+                        <%-- ── NOTIFICACIÓN OC GENERADA AUTOMÁTICAMENTE ── --%>
+                        <% if (ocGenerada != null) { %>
+                        <div class="alert alert-success alert-dismissible fade show d-flex align-items-center mb-3" role="alert">
+                            <i class="fas fa-check-circle me-2 fs-5"></i>
+                            <div>
+                                <strong>✔ Orden de Compra generada automáticamente</strong><br>
+                                <small><%= ocGenerada %></small>
+                                <a href="${pageContext.request.contextPath}/OrdenCompraServlet?accion=listar"
+                                   class="ms-3 btn btn-sm btn-success">
+                                    <i class="fas fa-shopping-cart me-1"></i>Ver OC
+                                </a>
+                            </div>
+                            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+                        </div>
+                        <% } %>
+
+                        <%-- ── ERROR DE BACKEND ── --%>
                         <% if (errorBackend != null) {%>
                         <div class="alert alert-danger alert-dismissible fade show" role="alert">
                             <i class="fas fa-exclamation-triangle me-2"></i> <%= errorBackend%>
@@ -104,6 +127,7 @@
                         </div>
                         <% } %>
 
+                        <%-- ── ALERTA DE STOCK CRÍTICO ── --%>
                         <% if (totalAlertas > 0) {%>
                         <div class="alert alert-warning d-flex align-items-center mb-4" role="alert">
                             <i class="fas fa-exclamation-triangle me-3 fs-5"></i>
@@ -111,6 +135,7 @@
                         </div>
                         <% }%>
 
+                        <%-- ── FORMULARIO NUEVO / EDITAR ── --%>
                         <% if (tieneAccesoCompleto) {%>
                         <div class="card card-modern mb-4">
                             <div class="card-header bg-white py-3">
@@ -122,30 +147,30 @@
                                     <% if (articuloEditar != null) {%><input type="hidden" name="idArticulo" value="<%= articuloEditar.getIdArticulo()%>"/><% }%>
                                     <div class="col-md-4">
                                         <label class="form-label fw-semibold">Nombre del Artículo</label>
-                                        <input type="text" name="nombre" class="form-control" 
-                                               value="<%= articuloEditar != null ? articuloEditar.getNombre() : ""%>" 
-                                               placeholder="Ej: Chaleco antibalas 2024" 
+                                        <input type="text" name="nombre" class="form-control"
+                                               value="<%= articuloEditar != null ? articuloEditar.getNombre() : ""%>"
+                                               placeholder="Ej: Chaleco antibalas 2024"
                                                required minlength="3" maxlength="100" pattern="^[a-zA-ZÁ-ÿ0-9\s\-]+$">
                                         <div class="invalid-feedback">Ingrese un nombre válido (letras, números, guiones). Mínimo 3 caracteres.</div>
                                     </div>
                                     <div class="col-md-2">
                                         <label class="form-label fw-semibold">Stock Actual</label>
-                                        <input type="number" name="stock" class="form-control" 
-                                               value="<%= articuloEditar != null ? articuloEditar.getStock() : "0"%>" 
+                                        <input type="number" name="stock" class="form-control"
+                                               value="<%= articuloEditar != null ? articuloEditar.getStock() : "0"%>"
                                                min="0" required>
                                         <div class="invalid-feedback">Requerido (mín. 0).</div>
                                     </div>
                                     <div class="col-md-2">
                                         <label class="form-label fw-semibold">Stock Límite</label>
-                                        <input type="number" name="stockLimite" class="form-control" 
-                                               value="<%= articuloEditar != null ? articuloEditar.getStockLimite() : "5"%>" 
+                                        <input type="number" name="stockLimite" class="form-control"
+                                               value="<%= articuloEditar != null ? articuloEditar.getStockLimite() : "5"%>"
                                                min="0" required>
                                         <div class="invalid-feedback">Requerido (mín. 0).</div>
                                     </div>
                                     <div class="col-md-4">
                                         <label class="form-label fw-semibold">Descripción</label>
-                                        <input type="text" name="descripcion" class="form-control" 
-                                               value="<%= articuloEditar != null && articuloEditar.getDescripcion() != null ? articuloEditar.getDescripcion() : ""%>" 
+                                        <input type="text" name="descripcion" class="form-control"
+                                               value="<%= articuloEditar != null && articuloEditar.getDescripcion() != null ? articuloEditar.getDescripcion() : ""%>"
                                                placeholder="Descripción opcional" maxlength="255">
                                     </div>
                                     <% if (articuloEditar != null) {%>
@@ -172,6 +197,7 @@
                         </div>
                         <% }%>
 
+                        <%-- ── TABLA DE INVENTARIO ── --%>
                         <div class="card card-modern">
                             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
                                 <h5 class="mb-0"><i class="fas fa-list me-2 text-primary"></i>Inventario de Artículos</h5>
@@ -199,10 +225,10 @@
                                         </thead>
                                         <tbody>
                                             <% if (articulos != null && !articulos.isEmpty()) {
-                                                    for (Articulo a : articulos) {
-                                                        boolean alerta = "ALERTA".equals(a.getEstadoStock());
-                                                        int pct = a.getStockLimite() > 0 ? Math.min(100, a.getStock() * 100 / (a.getStockLimite() * 2)) : 100;
-                                                        String barColor = alerta ? "#dc2626" : "#16a34a";
+                                                for (Articulo a : articulos) {
+                                                    boolean alerta = "ALERTA".equals(a.getEstadoStock());
+                                                    int pct = a.getStockLimite() > 0 ? Math.min(100, a.getStock() * 100 / (a.getStockLimite() * 2)) : 100;
+                                                    String barColor = alerta ? "#dc2626" : "#16a34a";
                                             %>
                                             <tr class="<%= alerta ? "table-warning" : ""%> fila-articulo">
                                                 <td class="px-4 fw-semibold text-primary">#<%= a.getIdArticulo()%></td>
@@ -218,18 +244,26 @@
                                                         <i class="fas fa-<%= alerta ? "exclamation-triangle" : "check"%> me-1"></i><%= alerta ? "ALERTA" : "OK"%>
                                                     </span>
                                                 </td>
-                                                <td class="text-center"><span class="badge <%= a.isRequiereCompra() ? "bg-warning text-dark" : "bg-light text-secondary border"%>"><%= a.isRequiereCompra() ? "Sí" : "No"%></span></td>
-
+                                                <td class="text-center">
+                                                    <span class="badge <%= a.isRequiereCompra() ? "bg-warning text-dark" : "bg-light text-secondary border"%>">
+                                                        <%= a.isRequiereCompra() ? "Sí" : "No"%>
+                                                    </span>
+                                                </td>
                                                 <% if (tieneAccesoCompleto) {%>
                                                 <td class="text-center">
-                                                    <a href="${pageContext.request.contextPath}/ArticuloServlet?accion=editar&id=<%= a.getIdArticulo()%>" class="btn btn-sm btn-outline-primary me-1"><i class="fas fa-edit"></i></a>
-                                                    <a href="${pageContext.request.contextPath}/ArticuloServlet?accion=eliminar&id=<%= a.getIdArticulo()%>" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Eliminar artículo?')"><i class="fas fa-trash"></i></a>
+                                                    <a href="${pageContext.request.contextPath}/ArticuloServlet?accion=editar&id=<%= a.getIdArticulo()%>"
+                                                       class="btn btn-sm btn-outline-primary me-1"><i class="fas fa-edit"></i></a>
+                                                    <a href="${pageContext.request.contextPath}/ArticuloServlet?accion=eliminar&id=<%= a.getIdArticulo()%>"
+                                                       class="btn btn-sm btn-outline-danger"
+                                                       onclick="return confirm('¿Eliminar artículo?')"><i class="fas fa-trash"></i></a>
                                                 </td>
                                                 <% } %>
                                             </tr>
                                             <% }
                                             } else {%>
-                                            <tr><td colspan="<%= tieneAccesoCompleto ? 7 : 6%>" class="text-center py-5 text-muted"><i class="fas fa-boxes fa-3x mb-3 d-block"></i>No hay artículos registrados</td></tr>
+                                            <tr><td colspan="<%= tieneAccesoCompleto ? 7 : 6%>" class="text-center py-5 text-muted">
+                                                <i class="fas fa-boxes fa-3x mb-3 d-block"></i>No hay artículos registrados
+                                            </td></tr>
                                             <% }%>
                                         </tbody>
                                     </table>
@@ -239,43 +273,42 @@
                     </div>
                 </div>
             </div></div>
+
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
         <script>
-                                                        // Validación Frontend con Bootstrap
-                                                        (() => {
-                                                            'use strict'
-                                                            const forms = document.querySelectorAll('.needs-validation')
-                                                            Array.from(forms).forEach(form => {
-                                                                form.addEventListener('submit', event => {
-                                                                    if (!form.checkValidity()) {
-                                                                        event.preventDefault()
-                                                                        event.stopPropagation()
-                                                                    }
-                                                                    form.classList.add('was-validated')
-                                                                }, false)
-                                                            })
-                                                        })();
+            // Validación Frontend con Bootstrap
+            (() => {
+                'use strict'
+                const forms = document.querySelectorAll('.needs-validation')
+                Array.from(forms).forEach(form => {
+                    form.addEventListener('submit', event => {
+                        if (!form.checkValidity()) {
+                            event.preventDefault()
+                            event.stopPropagation()
+                        }
+                        form.classList.add('was-validated')
+                    }, false)
+                })
+            })();
 
-                                                        // Buscador
-                                                        document.addEventListener("DOMContentLoaded", function () {
-                                                            const inputBuscador = document.getElementById("buscadorArticulos");
-                                                            if (inputBuscador) {
-                                                                inputBuscador.addEventListener("keyup", function () {
-                                                                    const filtro = this.value.toLowerCase();
-                                                                    const filas = document.querySelectorAll("#tablaArticulos tbody tr.fila-articulo");
-
-                                                                    filas.forEach(fila => {
-                                                                        // Busca el texto dentro de la celda que tiene la clase 'nombre-articulo'
-                                                                        const nombreArticulo = fila.querySelector(".nombre-articulo .fw-semibold").textContent.toLowerCase();
-
-                                                                        if (nombreArticulo.includes(filtro)) {
-                                                                            fila.style.display = "";
-                                                                        } else {
-                                                                            fila.style.display = "none";
-                                                                        }
-                                                                    });
-                                                                });
-                                                            }
-                                                        });
+            // Buscador
+            document.addEventListener("DOMContentLoaded", function () {
+                const inputBuscador = document.getElementById("buscadorArticulos");
+                if (inputBuscador) {
+                    inputBuscador.addEventListener("keyup", function () {
+                        const filtro = this.value.toLowerCase();
+                        const filas = document.querySelectorAll("#tablaArticulos tbody tr.fila-articulo");
+                        filas.forEach(fila => {
+                            const nombreArticulo = fila.querySelector(".nombre-articulo .fw-semibold").textContent.toLowerCase();
+                            if (nombreArticulo.includes(filtro)) {
+                                fila.style.display = "";
+                            } else {
+                                fila.style.display = "none";
+                            }
+                        });
+                    });
+                }
+            });
         </script>
-    </body></html>
+    </body>
+</html>

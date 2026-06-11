@@ -44,6 +44,15 @@
                 border-radius:12px;
                 box-shadow:0 2px 8px rgba(0,0,0,.07)
             }
+            .badge-auto {
+                background: #dbeafe;
+                color: #1d4ed8;
+                font-size: 10px;
+                padding: 2px 6px;
+                border-radius: 99px;
+                font-weight: 600;
+                vertical-align: middle;
+            }
         </style>
     </head><body>
         <%
@@ -63,7 +72,7 @@
         <div class="container-fluid p-0"><div class="row g-0">
 
                 <jsp:include page="/WEB-INF/vistas/sidebar.jsp" />
-                
+
                 <div class="col-md-9 col-lg-10 main-content">
                     <div class="topbar d-flex justify-content-between align-items-center">
                         <div><h6 class="mb-0 fw-bold"><i class="fas fa-shopping-cart me-2 text-primary"></i>Órdenes de Compra</h6>
@@ -72,6 +81,7 @@
                     </div>
                     <div class="p-4">
 
+                        <%-- ── ERROR BACKEND ── --%>
                         <% if (errorBackend != null) {%>
                         <div class="alert alert-danger alert-dismissible fade show" role="alert">
                             <i class="fas fa-exclamation-triangle me-2"></i> <%= errorBackend%>
@@ -79,10 +89,13 @@
                         </div>
                         <% }%>
 
+                        <%-- ── FORMULARIO NUEVA / EDITAR OC ── --%>
                         <div class="card card-modern mb-4">
                             <div class="card-header bg-white py-3">
-                                <h5 class="mb-0"><i class="fas fa-<%= ordenEditar != null ? "edit" : "plus-circle"%> me-2 text-primary"></i>
-                                    <%= ordenEditar != null ? "Editar Orden de Compra" : "Nueva Orden de Compra"%></h5>
+                                <h5 class="mb-0">
+                                    <i class="fas fa-<%= ordenEditar != null ? "edit" : "plus-circle"%> me-2 text-primary"></i>
+                                    <%= ordenEditar != null ? "Editar Orden de Compra" : "Nueva Orden de Compra"%>
+                                </h5>
                             </div>
                             <div class="card-body">
                                 <form action="${pageContext.request.contextPath}/OrdenCompraServlet" method="post" class="row g-3 needs-validation" novalidate>
@@ -91,55 +104,68 @@
                                     <input type="hidden" name="idOrden" value="<%= ordenEditar.getIdOrden()%>"/>
                                     <% } %>
 
+                                    <%-- Artículo que originó la OC --%>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-semibold">
+                                            Artículo en Alerta
+                                            <span class="badge-auto ms-1">Generación automática</span>
+                                        </label>
+                                        <input type="text" name="descripcion" class="form-control"
+                                               value="<%= ordenEditar != null && ordenEditar.getDescripcion() != null ? ordenEditar.getDescripcion() : ""%>"
+                                               placeholder="Artículo que disparó la alerta" maxlength="255">
+                                        <div class="form-text text-muted">Se completa automáticamente al detectar stock bajo.</div>
+                                    </div>
+
                                     <div class="col-md-4">
                                         <label class="form-label fw-semibold">Proveedor</label>
                                         <select name="idProveedor" class="form-select" required>
                                             <option value="">— Seleccionar —</option>
                                             <% if (proveedores != null) {
-                                                    for (Proveedor p : proveedores) {
-                                                        boolean sel = ordenEditar != null && ordenEditar.getProveedor() != null
-                                                                && ordenEditar.getProveedor().getIdProveedor() == p.getIdProveedor();%>
+                                                for (Proveedor p : proveedores) {
+                                                    boolean sel = ordenEditar != null && ordenEditar.getProveedor() != null
+                                                            && ordenEditar.getProveedor().getIdProveedor() == p.getIdProveedor();%>
                                             <option value="<%= p.getIdProveedor()%>" <%= sel ? "selected" : ""%>><%= p.getRazonSocial()%></option>
-                                            <% }
-                                                } %>
+                                            <% }} %>
                                         </select>
                                         <div class="invalid-feedback">Por favor, asigne un proveedor a la orden.</div>
                                     </div>
+
+                                    <div class="col-md-2">
+                                        <label class="form-label fw-semibold">Estado OC</label>
+                                        <select name="estadoOc" class="form-select" required>
+                                            <% for (String est : estadosOC) {
+                                                boolean sel = ordenEditar != null && est.equals(ordenEditar.getEstadoOc());%>
+                                            <option value="<%= est%>" <%= sel ? "selected" : ""%>><%= est%></option>
+                                            <% }%>
+                                        </select>
+                                    </div>
+
                                     <div class="col-md-3">
                                         <label class="form-label fw-semibold">Analista de Compras</label>
                                         <select name="idAnalista" class="form-select">
                                             <option value="">— Sin asignar —</option>
                                             <% if (empleados != null) {
-                                                    for (Empleado e : empleados) {
-                                                        boolean sel = ordenEditar != null && ordenEditar.getAnalista() != null
-                                                                && ordenEditar.getAnalista().getIdEmpleado() == e.getIdEmpleado();%>
+                                                for (Empleado e : empleados) {
+                                                    boolean sel = ordenEditar != null && ordenEditar.getAnalista() != null
+                                                            && ordenEditar.getAnalista().getIdEmpleado() == e.getIdEmpleado();%>
                                             <option value="<%= e.getIdEmpleado()%>" <%= sel ? "selected" : ""%>><%= e.getNombreCompleto()%></option>
-                                            <% }
-                                                } %>
+                                            <% }} %>
                                         </select>
                                     </div>
+
                                     <div class="col-md-3">
                                         <label class="form-label fw-semibold">Gerente de Compras</label>
                                         <select name="idGerente" class="form-select">
                                             <option value="">— Sin asignar —</option>
                                             <% if (empleados != null) {
-                                                    for (Empleado e : empleados) {
-                                                        boolean sel = ordenEditar != null && ordenEditar.getGerente() != null
-                                                                && ordenEditar.getGerente().getIdEmpleado() == e.getIdEmpleado();%>
+                                                for (Empleado e : empleados) {
+                                                    boolean sel = ordenEditar != null && ordenEditar.getGerente() != null
+                                                            && ordenEditar.getGerente().getIdEmpleado() == e.getIdEmpleado();%>
                                             <option value="<%= e.getIdEmpleado()%>" <%= sel ? "selected" : ""%>><%= e.getNombreCompleto()%></option>
-                                            <% }
-                                                } %>
+                                            <% }} %>
                                         </select>
                                     </div>
-                                    <div class="col-md-2">
-                                        <label class="form-label fw-semibold">Estado OC</label>
-                                        <select name="estadoOc" class="form-select" required>
-                                            <% for (String est : estadosOC) {
-                                                    boolean sel = ordenEditar != null && est.equals(ordenEditar.getEstadoOc());%>
-                                            <option value="<%= est%>" <%= sel ? "selected" : ""%>><%= est%></option>
-                                            <% }%>
-                                        </select>
-                                    </div>
+
                                     <div class="col-md-2 d-flex align-items-end">
                                         <button type="submit" class="btn btn-primary w-100">
                                             <i class="fas fa-save me-1"></i><%= ordenEditar != null ? "Actualizar" : "Crear OC"%>
@@ -154,6 +180,7 @@
                             </div>
                         </div>
 
+                        <%-- ── TABLA DE ÓRDENES ── --%>
                         <div class="card card-modern">
                             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                                 <h5 class="mb-0"><i class="fas fa-list me-2 text-primary"></i>Listado de Órdenes de Compra</h5>
@@ -163,35 +190,52 @@
                                 <div class="table-responsive">
                                     <table class="table table-hover mb-0">
                                         <thead class="bg-light">
-                                            <tr><th class="px-4">#</th><th>Fecha</th><th>Proveedor</th><th>Analista</th><th>Gerente</th><th class="text-center">Estado</th><th class="text-center">Acciones</th></tr>
+                                            <tr>
+                                                <th class="px-4">#</th>
+                                                <th>Fecha</th>
+                                                <th>Artículo en Alerta</th>
+                                                <th>Proveedor</th>
+                                                <th>Analista</th>
+                                                <th>Gerente</th>
+                                                <th class="text-center">Estado</th>
+                                                <th class="text-center">Acciones</th>
+                                            </tr>
                                         </thead>
                                         <tbody>
                                             <% if (ordenes != null && !ordenes.isEmpty()) {
-                                                    for (Ordencompra o : ordenes) {
-                                                        String badgeClass;
-                                                        switch (o.getEstadoOc() != null ? o.getEstadoOc() : "") {
-                                                            case "Autorizada":
-                                                                badgeClass = "bg-success";
-                                                                break;
-                                                            case "Rechazada":
-                                                                badgeClass = "bg-danger";
-                                                                break;
-                                                            case "Enviada":
-                                                                badgeClass = "bg-info";
-                                                                break;
-                                                            case "Conforme":
-                                                                badgeClass = "bg-warning text-dark";
-                                                                break;
-                                                            default:
-                                                                badgeClass = "bg-secondary";
-                                                        }%>
+                                                for (Ordencompra o : ordenes) {
+                                                    String badgeClass;
+                                                    switch (o.getEstadoOc() != null ? o.getEstadoOc() : "") {
+                                                        case "Autorizada": badgeClass = "bg-success";           break;
+                                                        case "Rechazada":  badgeClass = "bg-danger";            break;
+                                                        case "Enviada":    badgeClass = "bg-info";              break;
+                                                        case "Conforme":   badgeClass = "bg-warning text-dark"; break;
+                                                        default:           badgeClass = "bg-secondary";
+                                                    }
+                                                    boolean esAutomatica = o.getDescripcion() != null && !o.getDescripcion().isEmpty();
+                                            %>
                                             <tr>
                                                 <td class="px-4 fw-semibold text-primary">OC-<%= o.getIdOrden()%></td>
                                                 <td><small class="text-muted"><%= o.getFechaGeneracion() != null ? o.getFechaGeneracion().toString().replace("T", " ").substring(0, 16) : "—"%></small></td>
+                                                <td>
+                                                    <% if (esAutomatica) { %>
+                                                        <div class="d-flex align-items-center gap-2">
+                                                            <i class="fas fa-robot text-primary" title="Generada automáticamente"></i>
+                                                            <div>
+                                                                <div class="fw-semibold"><%= o.getDescripcion()%></div>
+                                                                <small class="badge-auto">Auto</small>
+                                                            </div>
+                                                        </div>
+                                                    <% } else { %>
+                                                        <span class="text-muted small">Manual</span>
+                                                    <% } %>
+                                                </td>
                                                 <td><div class="fw-semibold"><%= o.getProveedor() != null ? o.getProveedor().getRazonSocial() : "—"%></div></td>
                                                 <td><small><%= o.getAnalista() != null ? o.getAnalista().getNombreCompleto() : "—"%></small></td>
                                                 <td><small><%= o.getGerente() != null ? o.getGerente().getNombreCompleto() : "—"%></small></td>
-                                                <td class="text-center"><span class="badge <%= badgeClass%>"><%= o.getEstadoOc()%></span></td>
+                                                <td class="text-center">
+                                                    <span class="badge <%= badgeClass%>"><%= o.getEstadoOc()%></span>
+                                                </td>
                                                 <td class="text-center">
                                                     <a href="${pageContext.request.contextPath}/OrdenCompraServlet?accion=editar&id=<%= o.getIdOrden()%>"
                                                        class="btn btn-sm btn-outline-primary me-1"><i class="fas fa-edit"></i></a>
@@ -202,10 +246,10 @@
                                             </tr>
                                             <% }
                                             } else { %>
-                                            <tr><td colspan="7" class="text-center py-5 text-muted">
-                                                    <i class="fas fa-shopping-cart fa-3x mb-3 d-block"></i>No hay órdenes de compra registradas
-                                                </td></tr>
-                                                <% }%>
+                                            <tr><td colspan="8" class="text-center py-5 text-muted">
+                                                <i class="fas fa-shopping-cart fa-3x mb-3 d-block"></i>No hay órdenes de compra registradas
+                                            </td></tr>
+                                            <% }%>
                                         </tbody>
                                     </table>
                                 </div>
@@ -216,19 +260,18 @@
             </div></div>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
         <script>
-                                                           // Validación Frontend con Bootstrap
-                                                           (() => {
-                                                               'use strict'
-                                                               const forms = document.querySelectorAll('.needs-validation')
-                                                               Array.from(forms).forEach(form => {
-                                                                   form.addEventListener('submit', event => {
-                                                                       if (!form.checkValidity()) {
-                                                                           event.preventDefault()
-                                                                           event.stopPropagation()
-                                                                       }
-                                                                       form.classList.add('was-validated')
-                                                                   }, false)
-                                                               })
-                                                           })()
+            (() => {
+                'use strict'
+                const forms = document.querySelectorAll('.needs-validation')
+                Array.from(forms).forEach(form => {
+                    form.addEventListener('submit', event => {
+                        if (!form.checkValidity()) {
+                            event.preventDefault()
+                            event.stopPropagation()
+                        }
+                        form.classList.add('was-validated')
+                    }, false)
+                })
+            })()
         </script>
     </body></html>
