@@ -35,6 +35,13 @@ public class Solicitud {
         if (estadoSolicitud == null) estadoSolicitud = "Pendiente";
     }
 
+    @ManyToOne
+    @JoinColumn(name = "id_articulo")
+    private Articulo articulo;
+
+    @Column(name = "cantidad")
+    private Integer cantidad;
+    
     public Solicitud() {}
 
     public int getIdSolicitud()                         { return idSolicitud; }
@@ -49,4 +56,17 @@ public class Solicitud {
     public void setEstadoSolicitud(String v)            { this.estadoSolicitud = v; }
     public String getDescripcion()                      { return descripcion; }
     public void setDescripcion(String v)                { this.descripcion = v; }
+    public Articulo getArticulo() {
+        return articulo;
+    }
+    public void setArticulo(Articulo articulo) {
+        this.articulo = articulo;
+    }
+    public Integer getCantidad() {
+        return cantidad;
+    }
+
+    public void setCantidad(Integer cantidad) {
+        this.cantidad = cantidad;
+    }
 }

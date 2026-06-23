@@ -221,7 +221,6 @@
                         const rucValue = document.getElementById('rucInput').value;
                         
                         if (rucValue.length === 11 && /^\d{11}$/.test(rucValue)) {
-                            // Cambiar ícono a un spinner de carga para UX
                             const icon = this.querySelector('i');
                             icon.className = 'fas fa-spinner fa-spin';
                             

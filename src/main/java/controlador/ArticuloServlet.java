@@ -27,13 +27,12 @@ public class ArticuloServlet extends HttpServlet {
                 request.getRequestDispatcher("/WEB-INF/vistas/articulo.jsp").forward(request, response);
 
             } else if (accion.equals("editar")) {
-                // CORRECCIÓN: Definimos 'art' aquí para poder usarlo abajo
                 Articulo art = dao.buscar(Integer.parseInt(request.getParameter("id")));
                 request.setAttribute("articuloEditar", art);
                 request.setAttribute("articulos", dao.listar());
                 request.setAttribute("proveedores", provDAO.listarActivos());
 
-                // IMPLEMENTACIÓN: Verificar si existe OC para no mostrar modal si es duplicado
+                // Verificamos si existe OC para no mostrar modal si es duplicado
                 OrdenCompraDAO ocDAO = new OrdenCompraDAO();
                 boolean tieneOC = ocDAO.existeOCAutomaticaParaArticulo(art.getNombre());
                 ocDAO.close();
@@ -66,7 +65,6 @@ public class ArticuloServlet extends HttpServlet {
         ProveedorDAO provDAO = new ProveedorDAO();
 
         try {
-            // ── VALIDACIONES ─────────────────────────────────────────
             if (accion != null && (accion.equals("guardar") || accion.equals("actualizar"))) {
 
                 if (!esNombreArticuloValido(nombre)) {
@@ -107,7 +105,6 @@ public class ArticuloServlet extends HttpServlet {
                 }
             }
 
-            // ── PARSEAR VALORES ───────────────────────────────────────
             String[] estadoVals = request.getParameterValues("estado");
             boolean estado = true;
             if (estadoVals != null && estadoVals.length > 0) {
@@ -135,7 +132,6 @@ public class ArticuloServlet extends HttpServlet {
                 proveedorSeleccionado = provDAO.buscar(Integer.parseInt(idProvStr));
             }
 
-            // ── GUARDAR O ACTUALIZAR ──────────────────────────────────
             Articulo a;
             if ("actualizar".equals(accion)) {
                 a = dao.buscar(Integer.parseInt(request.getParameter("idArticulo")));
@@ -168,7 +164,7 @@ public class ArticuloServlet extends HttpServlet {
             if (stock <= stockLimite) {
                 OrdenCompraDAO ocDAO = new OrdenCompraDAO();
                 try {
-                    // IMPLEMENTACIÓN: Verificar OC pendiente para evitar duplicados
+                    // Verificar OC pendiente para evitar duplicados
                     if (ocDAO.existeOCAutomaticaParaArticulo(nombre.trim())) {
                         request.getSession().setAttribute("ocAdvertencia", 
                             "El artículo \"" + nombre.trim() + "\" requiere reposición, pero ya cuenta con una Orden de Compra en proceso. No se generó una OC duplicada.");

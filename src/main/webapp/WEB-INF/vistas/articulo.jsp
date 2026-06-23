@@ -272,7 +272,7 @@
                                                 <th>Artículo</th>
                                                 <th class="text-center">Stock Actual</th>
                                                 <th class="text-center">Límite</th>
-                                                <th class="text-center">Precio</th>
+                                                <th class="text-center">Precio Unit.</th>
                                                 <th>Proveedor</th>
                                                 <th class="text-center">Estado</th>
                                                 <% if (tieneAccesoCompleto) { %><th class="text-center">Acciones</th><% } %>
@@ -347,7 +347,7 @@
                                                                const divNuevoProv = document.getElementById('divNuevoProveedor');
                                                                const btnConfirmarOC = document.getElementById('btnConfirmarOC');
 
-                                                               // Bandera que viene del Servlet indicando si ya existe una OC activa
+                                                               // Indicador por si ya hay una OC Pendiente
                                                                const tieneOCPendiente = <%= tieneOCPendiente%>;
                                                                let modalOC;
 
@@ -371,7 +371,7 @@
                                                                        const stock = parseInt(formArt.querySelector('input[name="stock"]').value);
                                                                        const limite = parseInt(formArt.querySelector('input[name="stockLimite"]').value);
 
-                                                                       // Lógica: Si stock bajo Y no se ha confirmado Y NO existe una OC pendiente: Mostrar Modal
+                                                                       // Lógica: Si el stock bajó y no se ha confirmado y no existe una OC pendiente: Mostrar Modal
                                                                        if (stock <= limite && formArt.dataset.ocConfirmada !== 'true' && !tieneOCPendiente) {
                                                                            e.preventDefault();
                                                                            modalOC.show();

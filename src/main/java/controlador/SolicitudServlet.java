@@ -7,7 +7,7 @@ import java.io.IOException;
 
 public class SolicitudServlet extends HttpServlet {
 
-    @Override
+@Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
@@ -19,12 +19,14 @@ public class SolicitudServlet extends HttpServlet {
         SolicitudDAO dao = new SolicitudDAO();
         EmpleadoDAO empDAO = new EmpleadoDAO();
         AreaTrabajoDAO areaDAO = new AreaTrabajoDAO();
+        ArticuloDAO artDAO = new ArticuloDAO();
 
         try {
             if (accion == null || accion.equals("listar")) {
                 request.setAttribute("solicitudes", dao.listar());
                 request.setAttribute("empleados", empDAO.listar());
                 request.setAttribute("areas", areaDAO.listarActivos());
+                request.setAttribute("articulos", artDAO.listar());
                 request.getRequestDispatcher("/WEB-INF/vistas/solicitud.jsp").forward(request, response);
 
             } else if (accion.equals("editar")) {
@@ -32,6 +34,7 @@ public class SolicitudServlet extends HttpServlet {
                 request.setAttribute("solicitudes", dao.listar());
                 request.setAttribute("empleados", empDAO.listar());
                 request.setAttribute("areas", areaDAO.listarActivos());
+                request.setAttribute("articulos", artDAO.listar());
                 request.getRequestDispatcher("/WEB-INF/vistas/solicitud.jsp").forward(request, response);
 
             } else if (accion.equals("eliminar")) {
@@ -42,10 +45,11 @@ public class SolicitudServlet extends HttpServlet {
             dao.close();
             empDAO.close();
             areaDAO.close();
+            artDAO.close();
         }
     }
 
-    @Override
+@Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
@@ -58,11 +62,14 @@ public class SolicitudServlet extends HttpServlet {
         SolicitudDAO dao = new SolicitudDAO();
         EmpleadoDAO empDAO = new EmpleadoDAO();
         AreaTrabajoDAO areaDAO = new AreaTrabajoDAO();
+        ArticuloDAO artDAO = new ArticuloDAO();
 
         try {
             String idEmp = request.getParameter("idEmpleado");
             String idArea = request.getParameter("idArea");
             String descripcion = request.getParameter("descripcion");
+            String idArticulo = request.getParameter("idArticulo");
+            String cantidad = request.getParameter("cantidad");
 
             // Validación estricta del backend
             if (accion != null && (accion.equals("guardar") || accion.equals("actualizar"))) {
@@ -70,7 +77,10 @@ public class SolicitudServlet extends HttpServlet {
                     enviarErrorYRetornar(request, response, dao, empDAO, areaDAO, accion, "Error: Debe seleccionar tanto el empleado solicitante como el área de procedencia.");
                     return;
                 }
-
+                if (idArticulo == null || idArticulo.trim().isEmpty() || cantidad == null || cantidad.trim().isEmpty()) {
+                    enviarErrorYRetornar(request, response, dao, empDAO, areaDAO, accion, "Error: Debe seleccionar un artículo y especificar la cantidad.");
+                    return;
+                }
                 if (descripcion == null || descripcion.trim().isEmpty()) {
                     enviarErrorYRetornar(request, response, dao, empDAO, areaDAO, accion, "Error: La descripción de la solicitud no puede estar vacía.");
                     return;
@@ -80,7 +90,6 @@ public class SolicitudServlet extends HttpServlet {
             Solicitud s;
             if ("actualizar".equals(accion)) {
                 s = dao.buscar(Integer.parseInt(request.getParameter("idSolicitud")));
-                // Si es una actualización, permitimos que el estado cambie según lo enviado en el select
                 s.setEstadoSolicitud(request.getParameter("estadoSolicitud"));
             } else {
                 s = new Solicitud();
@@ -90,6 +99,8 @@ public class SolicitudServlet extends HttpServlet {
             s.setDescripcion(descripcion.trim());
             s.setEmpleado(empDAO.buscar(Integer.parseInt(idEmp)));
             s.setArea(areaDAO.buscar(Integer.parseInt(idArea)));
+            s.setArticulo(artDAO.buscar(Integer.parseInt(idArticulo)));
+            s.setCantidad(Integer.parseInt(cantidad));
 
             if ("actualizar".equals(accion)) {
                 dao.actualizar(s);
@@ -103,22 +114,29 @@ public class SolicitudServlet extends HttpServlet {
             dao.close();
             empDAO.close();
             areaDAO.close();
+            artDAO.close();
         }
     }
 
     // Método auxiliar para manejo de errores
     private void enviarErrorYRetornar(HttpServletRequest request, HttpServletResponse response, SolicitudDAO dao, EmpleadoDAO empDAO, AreaTrabajoDAO areaDAO, String accion, String mensajeError) throws ServletException, IOException {
-        request.setAttribute("error", mensajeError);
-        request.setAttribute("solicitudes", dao.listar());
-        request.setAttribute("empleados", empDAO.listar());
-        request.setAttribute("areas", areaDAO.listarActivos());
+        ArticuloDAO artDAO = new ArticuloDAO(); // Instanciamos para recuperar la lista en caso de error
+        try {
+            request.setAttribute("error", mensajeError);
+            request.setAttribute("solicitudes", dao.listar());
+            request.setAttribute("empleados", empDAO.listar());
+            request.setAttribute("areas", areaDAO.listarActivos());
+            request.setAttribute("articulos", artDAO.listar());
 
-        if (accion.equals("actualizar")) {
-            Solicitud s = dao.buscar(Integer.parseInt(request.getParameter("idSolicitud")));
-            request.setAttribute("solicitudEditar", s);
+            if (accion.equals("actualizar")) {
+                Solicitud s = dao.buscar(Integer.parseInt(request.getParameter("idSolicitud")));
+                request.setAttribute("solicitudEditar", s);
+            }
+
+            request.getRequestDispatcher("/WEB-INF/vistas/solicitud.jsp").forward(request, response);
+        } finally {
+            artDAO.close();
         }
-
-        request.getRequestDispatcher("/WEB-INF/vistas/solicitud.jsp").forward(request, response);
     }
 
     private boolean verificarSesion(HttpServletRequest req, HttpServletResponse res) throws IOException {

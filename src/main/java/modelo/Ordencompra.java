@@ -33,7 +33,6 @@ public class Ordencompra {
     @Column(name = "descripcion")
     private String descripcion;
 
-    // SOLUCIÓN: Usamos la clase Boolean en lugar del primitivo boolean
     @Column(name = "es_automatica")
     private Boolean esAutomatica = false;
 

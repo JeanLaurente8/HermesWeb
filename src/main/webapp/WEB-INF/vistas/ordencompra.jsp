@@ -110,7 +110,6 @@
                                                     int analistaFijo = 0;
                                                     if (empleados != null) {
                                                         for (Empleado e : empleados) {
-                                                            // CORRECCIÓN: Usamos .toLowerCase().contains("analista")
                                                             boolean sel = ordenEditar != null && ordenEditar.getAnalista() != null
                                                                     ? ordenEditar.getAnalista().getIdEmpleado() == e.getIdEmpleado()
                                                                     : (e.getCargo() != null && e.getCargo().toLowerCase().contains("analista") || analistaFijo == 0);
