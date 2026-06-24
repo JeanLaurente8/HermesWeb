@@ -44,6 +44,15 @@
                 border-radius:12px;
                 box-shadow:0 2px 8px rgba(0,0,0,.07)
             }
+            /* Estilo extra para el checkbox de estado */
+            .estado-checkbox input:checked + label {
+                color: #198754;
+                font-weight: bold;
+            } /* Verde Conforme */
+            .estado-checkbox input:not(:checked) + label {
+                color: #dc3545;
+                font-weight: bold;
+            } /* Rojo Rechazado */
         </style>
     </head><body>
         <%
@@ -62,7 +71,7 @@
         <div class="container-fluid p-0"><div class="row g-0">
 
                 <jsp:include page="/WEB-INF/vistas/sidebar.jsp" />
-                
+
                 <div class="col-md-9 col-lg-10 main-content">
                     <div class="topbar d-flex justify-content-between align-items-center">
                         <div><h6 class="mb-0 fw-bold"><i class="fas fa-check-circle me-2 text-primary"></i>Conformidad de Pedidos</h6>
@@ -91,24 +100,40 @@
                                     <% } %>
 
                                     <div class="col-md-4">
-                                        <label class="form-label fw-semibold">Solicitud</label>
-                                        <select name="idSolicitud" class="form-select" required>
-                                            <option value="">Seleccionar solicitud</option>
+                                        <label class="form-label fw-semibold">Solicitud Base</label>
+                                        <select name="idSolicitud" id="selectSolicitud" class="form-select" required>
+                                            <option value="" data-articulo="" data-cantidad="">Seleccionar solicitud</option>
                                             <% if (solicitudes != null) {
                                                     for (Solicitud s : solicitudes) {
                                                         boolean sel = conformidadEditar != null && conformidadEditar.getSolicitud() != null
-                                                                && conformidadEditar.getSolicitud().getIdSolicitud() == s.getIdSolicitud();%>
-                                            <option value="<%= s.getIdSolicitud()%>" <%= sel ? "selected" : ""%>>
-                                                #<%= s.getIdSolicitud()%> <%= s.getEmpleado() != null ? s.getEmpleado().getNombreCompleto() : "?"%>
-                                                (<%= s.getEstadoSolicitud()%>)
+                                                                && conformidadEditar.getSolicitud().getIdSolicitud() == s.getIdSolicitud();
+
+                                                        // Guardamos el artículo y cantidad en data-attributes
+                                                        String nombreArticulo = (s.getArticulo() != null) ? s.getArticulo().getNombre() : "Sin Artículo";
+                                                        String cantidadStr = (s.getCantidad() != null) ? String.valueOf(s.getCantidad()) : "0";
+                                            %>
+                                            <option value="<%= s.getIdSolicitud()%>" data-articulo="<%= nombreArticulo%>" data-cantidad="<%= cantidadStr%>" <%= sel ? "selected" : ""%>>
+                                                #<%= s.getIdSolicitud()%> - <%= s.getEmpleado() != null ? s.getEmpleado().getNombreCompleto() : "?"%>
                                             </option>
                                             <% }
-                                                } %>
+                                                }%>
                                         </select>
                                         <div class="invalid-feedback">Por favor, seleccione una solicitud.</div>
                                     </div>
+
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold text-muted">Artículo a Confirmar</label>
+                                        <input type="text" id="displayArticulo" class="form-control bg-light" readonly tabindex="-1"
+                                               value="<%= conformidadEditar != null && conformidadEditar.getSolicitud() != null && conformidadEditar.getSolicitud().getArticulo() != null ? conformidadEditar.getSolicitud().getArticulo().getNombre() : ""%>">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label fw-semibold text-muted">Cantidad</label>
+                                        <input type="text" id="displayCantidad" class="form-control bg-light text-center" readonly tabindex="-1"
+                                               value="<%= conformidadEditar != null && conformidadEditar.getSolicitud() != null && conformidadEditar.getSolicitud().getCantidad() != null ? conformidadEditar.getSolicitud().getCantidad() : ""%>">
+                                    </div>
+
                                     <div class="col-md-4">
-                                        <label class="form-label fw-semibold">Empleado que Recibe</label>
+                                        <label class="form-label fw-semibold">Empleado Receptor</label>
                                         <select name="idEmpleado" class="form-select" required>
                                             <option value="">Seleccionar empleado</option>
                                             <% if (empleados != null) {
@@ -121,31 +146,33 @@
                                         </select>
                                         <div class="invalid-feedback">Por favor, seleccione el empleado receptor.</div>
                                     </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label fw-semibold">Comentarios</label>
-                                        <input type="text" name="comentarios" class="form-control"
-                                               value="<%= conformidadEditar != null && conformidadEditar.getComentarios() != null ? conformidadEditar.getComentarios() : ""%>"
-                                               placeholder="Observaciones sobre la recepción"
-                                               pattern="^[a-zA-ZÁ-ÿ0-9\s\-]*$" maxlength="255">
-                                        <div class="invalid-feedback">Formato inválido. Solo se admiten letras, números, espacios y guiones.</div>
-                                    </div>
-                                    <div class="col-md-3 d-flex align-items-center gap-3">
-                                        <div class="form-check form-switch">
-                                            <input class="form-check-input" type="checkbox" name="firmaConformidad" id="firma" role="switch"
-                                                   <%= conformidadEditar != null && conformidadEditar.isFirmaConformidad() ? "checked" : ""%>>
-                                            <label class="form-check-label fw-semibold" for="firma">Firma de Conformidad</label>
+
+                                    <div class="col-md-8 d-flex align-items-center">
+                                        <div class="form-check form-switch estado-checkbox fs-5 ms-2 mt-4">
+                                            <input class="form-check-input shadow-none" type="checkbox" name="firmaConformidad" id="firma" role="switch"
+                                                   <%= (conformidadEditar == null || conformidadEditar.isFirmaConformidad()) ? "checked" : ""%>>
+                                            <label class="form-check-label ms-2" id="labelFirma" for="firma" style="cursor:pointer;">
+                                                <%= (conformidadEditar == null || conformidadEditar.isFirmaConformidad()) ? "Conforme" : "Rechazado"%>
+                                            </label>
                                         </div>
                                     </div>
-                                    <div class="col-md-2 d-flex align-items-end">
-                                        <button type="submit" class="btn btn-primary w-100">
-                                            <i class="fas fa-save me-1"></i><%= conformidadEditar != null ? "Actualizar" : "Registrar"%>
+
+                                    <div class="col-12">
+                                        <label class="form-label fw-semibold">Comentarios / Observaciones</label>
+                                        <textarea name="comentarios" class="form-control" rows="3"
+                                                  placeholder="Escriba aquí las observaciones sobre la recepción o el motivo de rechazo..."
+                                                  pattern="^[a-zA-ZÁ-ÿ0-9\s\-]*$" maxlength="255"><%= conformidadEditar != null && conformidadEditar.getComentarios() != null ? conformidadEditar.getComentarios() : ""%></textarea>
+                                        <div class="invalid-feedback">Formato inválido. Solo se admiten letras, números, espacios y guiones.</div>
+                                    </div>
+
+                                    <div class="col-12 text-end mt-3">
+                                        <% if (conformidadEditar != null) { %>
+                                        <a href="${pageContext.request.contextPath}/ConformidadServlet?accion=listar" class="btn btn-secondary me-2">Cancelar</a>
+                                        <% }%>
+                                        <button type="submit" class="btn btn-primary px-4">
+                                            <i class="fas fa-save me-1"></i><%= conformidadEditar != null ? "Actualizar" : "Registrar Conformidad"%>
                                         </button>
                                     </div>
-                                    <% if (conformidadEditar != null) { %>
-                                    <div class="col-md-2 d-flex align-items-end">
-                                        <a href="${pageContext.request.contextPath}/ConformidadServlet?accion=listar" class="btn btn-secondary w-100">Cancelar</a>
-                                    </div>
-                                    <% }%>
                                 </form>
                             </div>
                         </div>
@@ -159,11 +186,24 @@
                                 <div class="table-responsive">
                                     <table class="table table-hover mb-0">
                                         <thead class="bg-light">
-                                            <tr><th class="px-4">#</th><th>Solicitud</th><th>Empleado Receptor</th><th>Fecha</th><th class="text-center">Firma</th><th>Comentarios</th><th class="text-center">Acciones</th></tr>
+                                            <tr>
+                                                <th class="px-4">#</th>
+                                                <th>Solicitud</th>
+                                                <th>Receptor</th>
+                                                <th>Artículo Entregado</th>
+                                                <th>Fecha</th>
+                                                <th class="text-center">Estado</th>
+                                                <th>Comentarios</th>
+                                                <th class="text-center">Acciones</th>
+                                            </tr>
                                         </thead>
                                         <tbody>
                                             <% if (conformidades != null && !conformidades.isEmpty()) {
-                                                    for (Conformidad c : conformidades) {%>
+                                                    for (Conformidad c : conformidades) {
+                                                        // Extraer datos visuales de la solicitud vinculada
+                                                        String nombreArticulo = (c.getSolicitud() != null && c.getSolicitud().getArticulo() != null) ? c.getSolicitud().getArticulo().getNombre() : "—";
+                                                        String cantidad = (c.getSolicitud() != null && c.getSolicitud().getCantidad() != null) ? String.valueOf(c.getSolicitud().getCantidad()) : "—";
+                                            %>
                                             <tr>
                                                 <td class="px-4 fw-semibold text-primary">#<%= c.getIdConformidad()%></td>
                                                 <td>
@@ -172,15 +212,20 @@
                                                     </span>
                                                 </td>
                                                 <td><div class="fw-semibold"><%= c.getEmpleado() != null ? c.getEmpleado().getNombreCompleto() : "—"%></div></td>
+
+                                                <td>
+                                                    <span class="fw-bold text-primary"><%= cantidad%>x</span> <%= nombreArticulo%>
+                                                </td>
+
                                                 <td><small class="text-muted"><%= c.getFechaConformidad() != null ? c.getFechaConformidad().toString().replace("T", " ").substring(0, 16) : "—"%></small></td>
                                                 <td class="text-center">
                                                     <% if (c.isFirmaConformidad()) { %>
-                                                    <span class="badge bg-success"><i class="fas fa-check me-1"></i>Firmado</span>
+                                                    <span class="badge bg-success"><i class="fas fa-check me-1"></i>Conforme</span>
                                                     <% } else { %>
-                                                    <span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i>Pendiente</span>
+                                                    <span class="badge bg-danger"><i class="fas fa-times me-1"></i>Rechazado</span>
                                                     <% }%>
                                                 </td>
-                                                <td><small><%= c.getComentarios() != null ? c.getComentarios() : ""%></small></td>
+                                                <td><small class="text-truncate d-inline-block" style="max-width: 150px;" title="<%= c.getComentarios() != null ? c.getComentarios() : ""%>"><%= c.getComentarios() != null ? c.getComentarios() : ""%></small></td>
                                                 <td class="text-center">
                                                     <a href="${pageContext.request.contextPath}/ConformidadServlet?accion=editar&id=<%= c.getIdConformidad()%>"
                                                        class="btn btn-sm btn-outline-primary me-1"><i class="fas fa-edit"></i></a>
@@ -191,7 +236,7 @@
                                             </tr>
                                             <% }
                                             } else { %>
-                                            <tr><td colspan="7" class="text-center py-5 text-muted">
+                                            <tr><td colspan="8" class="text-center py-5 text-muted">
                                                     <i class="fas fa-check-circle fa-3x mb-3 d-block"></i>No hay conformidades registradas
                                                 </td></tr>
                                                 <% }%>
@@ -218,6 +263,38 @@
                                                                        form.classList.add('was-validated')
                                                                    }, false)
                                                                })
-                                                           })()
+                                                           })();
+
+                                                           // SCRIPT PARA AUTOCOMPLETAR ARTÍCULO Y CANTIDAD
+                                                           document.addEventListener("DOMContentLoaded", function () {
+                                                               const selectSolicitud = document.getElementById('selectSolicitud');
+                                                               const displayArticulo = document.getElementById('displayArticulo');
+                                                               const displayCantidad = document.getElementById('displayCantidad');
+
+                                                               if (selectSolicitud) {
+                                                                   selectSolicitud.addEventListener('change', function () {
+                                                                       const selectedOption = this.options[this.selectedIndex];
+                                                                       const articulo = selectedOption.getAttribute('data-articulo');
+                                                                       const cantidad = selectedOption.getAttribute('data-cantidad');
+
+                                                                       displayArticulo.value = articulo ? articulo : "";
+                                                                       displayCantidad.value = cantidad ? cantidad : "";
+                                                                   });
+                                                               }
+
+                                                               // SCRIPT PARA EL CHECKBOX (Conforme/Rechazado dinámico)
+                                                               const checkboxFirma = document.getElementById('firma');
+                                                               const labelFirma = document.getElementById('labelFirma');
+
+                                                               if (checkboxFirma && labelFirma) {
+                                                                   checkboxFirma.addEventListener('change', function () {
+                                                                       if (this.checked) {
+                                                                           labelFirma.textContent = 'Conforme';
+                                                                       } else {
+                                                                           labelFirma.textContent = 'Rechazado';
+                                                                       }
+                                                                   });
+                                                               }
+                                                           });
         </script>
     </body></html>

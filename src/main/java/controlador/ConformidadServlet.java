@@ -59,6 +59,7 @@ public class ConformidadServlet extends HttpServlet {
         ConformidadDAO dao = new ConformidadDAO();
         SolicitudDAO solDAO = new SolicitudDAO();
         EmpleadoDAO empDAO = new EmpleadoDAO();
+        ArticuloDAO artDAO = new ArticuloDAO();
 
         try {
             // Validaciones Estrictas Backend
@@ -66,15 +67,13 @@ public class ConformidadServlet extends HttpServlet {
                 String comentarios = request.getParameter("comentarios");
                 String idSolStr = request.getParameter("idSolicitud");
 
-                // Validar Regex de comentarios (si el usuario ingresó algo)
                 if (comentarios != null && !comentarios.trim().isEmpty()) {
                     if (!comentarios.matches("^[a-zA-ZÁ-ÿ0-9\\s\\-]*$")) {
-                        enviarErrorYRetornar(request, response, dao, solDAO, empDAO, accion, "Error: Los comentarios tienen formato inválido. Solo se admiten letras, números, espacios y guiones.");
+                        enviarErrorYRetornar(request, response, dao, solDAO, empDAO, accion, "Error: Los comentarios tienen formato inválido.");
                         return;
                     }
                 }
 
-                // Validar que no haya otra conformidad para la misma solicitud (evita duplicados)
                 if (idSolStr != null && !idSolStr.isEmpty()) {
                     int idSol = Integer.parseInt(idSolStr);
                     boolean esDuplicado = false;
@@ -96,20 +95,40 @@ public class ConformidadServlet extends HttpServlet {
                     }
 
                     if (esDuplicado) {
-                        enviarErrorYRetornar(request, response, dao, solDAO, empDAO, accion, "Error: Ya existe una conformidad registrada para la Solicitud #" + idSol + ". Por favor, edite el registro existente en su lugar.");
+                        enviarErrorYRetornar(request, response, dao, solDAO, empDAO, accion, "Error: Ya existe una conformidad registrada para la Solicitud #" + idSol + ".");
                         return;
                     }
                 }
             }
 
+            // LÓGICA DE CONTROL DE STOCK
             Conformidad c;
+            boolean descontarStock = false;
+            boolean devolverStock = false;
+            boolean esConformeNuevo = "on".equals(request.getParameter("firmaConformidad"));
+
             if ("actualizar".equals(accion)) {
                 c = dao.buscar(Integer.parseInt(request.getParameter("idConformidad")));
+                boolean eraConforme = c.isFirmaConformidad();
+
+                // Si antes no estaba firmado y ahora sí -> Descontar
+                if (!eraConforme && esConformeNuevo) {
+                    descontarStock = true;
+                }
+                // Si antes estaba firmado y ahora se le quita la firma (rechazado) -> Devolver
+                if (eraConforme && !esConformeNuevo) {
+                    devolverStock = true;
+                }
+
             } else {
                 c = new Conformidad();
+                // Si es nuevo y nace firmado -> Descontar
+                if (esConformeNuevo) {
+                    descontarStock = true;
+                }
             }
 
-            c.setFirmaConformidad("on".equals(request.getParameter("firmaConformidad")));
+            c.setFirmaConformidad(esConformeNuevo);
             c.setComentarios(request.getParameter("comentarios") != null ? request.getParameter("comentarios").trim() : "");
 
             String idSol = request.getParameter("idSolicitud");
@@ -122,21 +141,68 @@ public class ConformidadServlet extends HttpServlet {
                 c.setEmpleado(empDAO.buscar(Integer.parseInt(idEmp)));
             }
 
+            // VALIDACIÓN: CONTROL DE STOCK INSUFICIENTE
+            if (descontarStock && c.getSolicitud() != null && c.getSolicitud().getArticulo() != null) {
+                // Buscamos el artículo para verificar su stock real actual
+                Articulo articuloVerificar = artDAO.buscar(c.getSolicitud().getArticulo().getIdArticulo());
+                int stockDisponible = articuloVerificar.getStock();
+                int cantidadRequerida = c.getSolicitud().getCantidad();
+
+                // Si no hay suficiente stock en almacén, rebotamos la operación
+                if (stockDisponible < cantidadRequerida) {
+                    String mensajeError = "Error: No se puede procesar la conformidad. El stock actual de '"
+                            + articuloVerificar.getNombre() + "' es de " + stockDisponible
+                            + " unidades, pero la solicitud requiere " + cantidadRequerida + ".";
+
+                    enviarErrorYRetornar(request, response, dao, solDAO, empDAO, accion, mensajeError);
+                    return; // Detiene la ejecución por completo para que no guarde nada
+                }
+            }
+            
+            // Si pasa la validación, recién procedemos a guardar en la base de datos
             if ("actualizar".equals(accion)) {
                 dao.actualizar(c);
             } else {
                 dao.guardar(c);
             }
+            // EJECUTAMOS EL MOVIMIENTO DE STOCK Y CAMBIO DE ESTADO
+            if (c.getSolicitud() != null) {
+                if (descontarStock || devolverStock) {
+                    if (c.getSolicitud().getArticulo() != null) {
+                        int idArticuloVinc = c.getSolicitud().getArticulo().getIdArticulo();
+                        Articulo articuloDB = artDAO.buscar(idArticuloVinc);
+                        int cantidadMovimiento = c.getSolicitud().getCantidad();
+                        int stockActual = articuloDB.getStock();
+
+                        if (descontarStock) {
+                            articuloDB.setStock(stockActual - cantidadMovimiento);
+                        } else if (devolverStock) {
+                            articuloDB.setStock(stockActual + cantidadMovimiento);
+                        }
+                        artDAO.actualizar(articuloDB);
+                    }
+
+                    Solicitud sol = c.getSolicitud();
+                    if (descontarStock) {
+                        sol.setEstadoSolicitud("Entregada");
+                    } else if (devolverStock) {
+                        sol.setEstadoSolicitud("Pendiente");
+                    }
+                    solDAO.actualizar(sol);
+                }
+            }
 
             response.sendRedirect("ConformidadServlet?accion=listar");
-
+            
+           
         } finally {
             dao.close();
             solDAO.close();
             empDAO.close();
+            artDAO.close();
         }
     }
-
+    
     // Método auxiliar para manejo de errores
     private void enviarErrorYRetornar(HttpServletRequest request, HttpServletResponse response, ConformidadDAO dao, SolicitudDAO solDAO, EmpleadoDAO empDAO, String accion, String mensajeError) throws ServletException, IOException {
         request.setAttribute("error", mensajeError);
