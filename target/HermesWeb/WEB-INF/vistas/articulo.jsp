@@ -66,10 +66,16 @@
         <%
             Empleado sesion = (Empleado) session.getAttribute("empleado");
             List<Articulo> articulos = (List<Articulo>) request.getAttribute("articulos");
+            List<Proveedor> proveedores = (List<Proveedor>) request.getAttribute("proveedores");
             Articulo articuloEditar = (Articulo) request.getAttribute("articuloEditar");
             String errorBackend = (String) request.getAttribute("error");
 
-            // Validación de permisos para artículos según el usuario
+            // Recibimos el estado de OC pendiente del Servlet
+            Boolean tieneOCPendiente = (Boolean) request.getAttribute("tieneOCPendiente");
+            if (tieneOCPendiente == null) {
+                tieneOCPendiente = false;
+            }
+
             boolean tieneAccesoCompleto = AuthUtils.tieneAccesoCompleto(sesion, "Articulos");
 
             int totalAlertas = 0;
@@ -81,11 +87,14 @@
                 }
             }
 
-            // Leer y limpiar la notificación de OC generada automáticamente
             String ocGenerada = (String) session.getAttribute("ocGenerada");
             if (ocGenerada != null) {
                 session.removeAttribute("ocGenerada");
             }
+
+            String ocAdvertencia = (String) session.getAttribute("ocAdvertencia");
+            if (ocAdvertencia != null)
+                session.removeAttribute("ocAdvertencia");
         %>
 
         <div class="container-fluid p-0"><div class="row g-0">
@@ -103,23 +112,30 @@
                     </div>
                     <div class="p-4">
 
-                        <%-- ── NOTIFICACIÓN OC GENERADA AUTOMÁTICAMENTE ── --%>
-                        <% if (ocGenerada != null) { %>
+                        <% if (ocGenerada != null) {%>
                         <div class="alert alert-success alert-dismissible fade show d-flex align-items-center mb-3" role="alert">
                             <i class="fas fa-check-circle me-2 fs-5"></i>
                             <div>
                                 <strong>✔ Orden de Compra generada automáticamente</strong><br>
-                                <small><%= ocGenerada %></small>
-                                <a href="${pageContext.request.contextPath}/OrdenCompraServlet?accion=listar"
-                                   class="ms-3 btn btn-sm btn-success">
-                                    <i class="fas fa-shopping-cart me-1"></i>Ver OC
-                                </a>
+                                <small><%= ocGenerada%></small>
+                                <a href="${pageContext.request.contextPath}/OrdenCompraServlet?accion=listar" class="ms-3 btn btn-sm btn-success"><i class="fas fa-shopping-cart me-1"></i>Ver OC</a>
                             </div>
                             <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
                         </div>
                         <% } %>
 
-                        <%-- ── ERROR DE BACKEND ── --%>
+                        <% if (ocAdvertencia != null) {%>
+                        <div class="alert alert-info alert-dismissible fade show d-flex align-items-center mb-3" role="alert">
+                            <i class="fas fa-info-circle me-2 fs-5"></i>
+                            <div>
+                                <strong>ℹ Aviso de Orden de Compra</strong><br>
+                                <small><%= ocAdvertencia%></small>
+                                <a href="${pageContext.request.contextPath}/OrdenCompraServlet?accion=listar" class="ms-3 btn btn-sm btn-outline-info"><i class="fas fa-list me-1"></i>Ir a Órdenes</a>
+                            </div>
+                            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+                        </div>
+                        <% } %>
+
                         <% if (errorBackend != null) {%>
                         <div class="alert alert-danger alert-dismissible fade show" role="alert">
                             <i class="fas fa-exclamation-triangle me-2"></i> <%= errorBackend%>
@@ -127,66 +143,67 @@
                         </div>
                         <% } %>
 
-                        <%-- ── ALERTA DE STOCK CRÍTICO ── --%>
                         <% if (totalAlertas > 0) {%>
                         <div class="alert alert-warning d-flex align-items-center mb-4" role="alert">
                             <i class="fas fa-exclamation-triangle me-3 fs-5"></i>
-                            <div><strong>⚠ Alerta de Stock Crítico:</strong> <strong><%= totalAlertas%></strong> artículo(s) requieren reposición. Se recomienda generar una Orden de Compra.</div>
+                            <div><strong>⚠ Alerta de Stock Crítico:</strong> <strong><%= totalAlertas%></strong> artículo(s) requieren reposición.</div>
                         </div>
                         <% }%>
 
-                        <%-- ── FORMULARIO NUEVO / EDITAR ── --%>
                         <% if (tieneAccesoCompleto) {%>
                         <div class="card card-modern mb-4">
                             <div class="card-header bg-white py-3">
                                 <h5 class="mb-0"><i class="fas fa-<%= articuloEditar != null ? "edit" : "plus-circle"%> me-2 text-primary"></i><%= articuloEditar != null ? "Editar Artículo" : "Nuevo Artículo"%></h5>
                             </div>
                             <div class="card-body">
-                                <form action="${pageContext.request.contextPath}/ArticuloServlet" method="post" class="row g-3 needs-validation" novalidate>
+                                <form action="${pageContext.request.contextPath}/ArticuloServlet" method="post" id="formArticulo" class="row g-3 needs-validation" novalidate>
                                     <input type="hidden" name="accion" value="<%= articuloEditar != null ? "actualizar" : "guardar"%>"/>
                                     <% if (articuloEditar != null) {%><input type="hidden" name="idArticulo" value="<%= articuloEditar.getIdArticulo()%>"/><% }%>
-                                    <div class="col-md-4">
+
+                                    <input type="hidden" name="generarOC" id="flagGenerarOC" value="false">
+                                    <input type="hidden" name="idProveedorOC" id="valProveedorOC" value="">
+
+                                    <div class="col-md-3">
                                         <label class="form-label fw-semibold">Nombre del Artículo</label>
-                                        <input type="text" name="nombre" class="form-control"
-                                               value="<%= articuloEditar != null ? articuloEditar.getNombre() : ""%>"
-                                               placeholder="Ej: Chaleco antibalas 2024"
-                                               required minlength="3" maxlength="100" pattern="^[a-zA-ZÁ-ÿ0-9\s\-]+$">
-                                        <div class="invalid-feedback">Ingrese un nombre válido (letras, números, guiones). Mínimo 3 caracteres.</div>
+                                        <input type="text" name="nombre" class="form-control" value="<%= articuloEditar != null ? articuloEditar.getNombre() : ""%>" placeholder="Ej: Chaleco antibalas" required minlength="3" maxlength="100">
                                     </div>
                                     <div class="col-md-2">
                                         <label class="form-label fw-semibold">Stock Actual</label>
-                                        <input type="number" name="stock" class="form-control"
-                                               value="<%= articuloEditar != null ? articuloEditar.getStock() : "0"%>"
-                                               min="0" required>
-                                        <div class="invalid-feedback">Requerido (mín. 0).</div>
+                                        <input type="number" name="stock" class="form-control" value="<%= articuloEditar != null ? articuloEditar.getStock() : "0"%>" min="0" required>
                                     </div>
                                     <div class="col-md-2">
                                         <label class="form-label fw-semibold">Stock Límite</label>
-                                        <input type="number" name="stockLimite" class="form-control"
-                                               value="<%= articuloEditar != null ? articuloEditar.getStockLimite() : "5"%>"
-                                               min="0" required>
-                                        <div class="invalid-feedback">Requerido (mín. 0).</div>
+                                        <input type="number" name="stockLimite" class="form-control" value="<%= articuloEditar != null ? articuloEditar.getStockLimite() : "5"%>" min="0" required>
                                     </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label fw-semibold">Descripción</label>
-                                        <input type="text" name="descripcion" class="form-control"
-                                               value="<%= articuloEditar != null && articuloEditar.getDescripcion() != null ? articuloEditar.getDescripcion() : ""%>"
-                                               placeholder="Descripción opcional" maxlength="255">
-                                    </div>
-                                    <% if (articuloEditar != null) {%>
-                                    <div class="col-md-2 d-flex align-items-end">
-                                        <div class="form-check mb-2">
-                                            <input type="hidden" name="estado" value="false" />
-                                            <input class="form-check-input" type="checkbox" name="estado" id="estadoArt"
-                                                   value="true"
-                                                   <%= (articuloEditar != null ? (articuloEditar.isEstado() ? "checked" : "") : "checked")%> >
-                                            <label class="form-check-label" for="estadoArt">Activo</label>
+                                    <div class="col-md-2">
+                                        <label class="form-label fw-semibold">Precio Unit.</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">S/</span>
+                                            <input type="number" step="0.01" name="precio" class="form-control" value="<%= articuloEditar != null ? articuloEditar.getPrecio() : "0.00"%>" min="0" required>
                                         </div>
                                     </div>
-                                    <% }%>
-                                    <div class="col-md-2 d-flex align-items-end">
-                                        <button type="submit" class="btn btn-primary w-100"><i class="fas fa-save me-1"></i><%= articuloEditar != null ? "Actualizar" : "Guardar"%></button>
+                                    <div class="col-md-3">
+                                        <label class="form-label fw-semibold">Proveedor Asociado</label>
+                                        <select name="idProveedor" class="form-select" required>
+                                            <option value="">— Seleccionar —</option>
+                                            <% if (proveedores != null) {
+                                                    for (Proveedor p : proveedores) {
+                                                        boolean sel = articuloEditar != null && articuloEditar.getProveedor() != null && articuloEditar.getProveedor().getIdProveedor() == p.getIdProveedor();
+                                            %>
+                                            <option value="<%= p.getIdProveedor()%>" <%= sel ? "selected" : ""%>><%= p.getRazonSocial()%></option>
+                                            <% }
+                                                }%>
+                                        </select>
                                     </div>
+                                    <div class="col-md-10">
+                                        <label class="form-label fw-semibold">Descripción</label>
+                                        <input type="text" name="descripcion" class="form-control" value="<%= articuloEditar != null && articuloEditar.getDescripcion() != null ? articuloEditar.getDescripcion() : ""%>" placeholder="Descripción opcional" maxlength="255">
+                                    </div>
+
+                                    <div class="col-md-2 d-flex align-items-end">
+                                        <button type="submit" class="btn btn-primary w-100 mb-1"><i class="fas fa-save me-1"></i><%= articuloEditar != null ? "Actualizar" : "Guardar"%></button>
+                                    </div>
+
                                     <% if (articuloEditar != null) { %>
                                     <div class="col-md-2 d-flex align-items-end">
                                         <a href="${pageContext.request.contextPath}/ArticuloServlet?accion=listar" class="btn btn-secondary w-100">Cancelar</a>
@@ -195,18 +212,55 @@
                                 </form>
                             </div>
                         </div>
+
+                        <div class="modal fade" id="modalCrearOCAutomatica" tabindex="-1">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title"><i class="fas fa-robot text-primary me-2"></i>Stock bajo detectado</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body text-start">
+                                        <p>El stock que estás guardando es menor o igual al límite. Se generará una <strong>Orden de Compra Automática</strong>.</p>
+                                        <p class="fw-semibold mb-2 mt-3">¿Requiere cambio de proveedor para esta OC?</p>
+
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="radio" name="cambioProv" id="provNo" value="no" checked>
+                                            <label class="form-check-label" for="provNo">No, usar el proveedor asignado al artículo</label>
+                                        </div>
+                                        <div class="form-check mb-3">
+                                            <input class="form-check-input" type="radio" name="cambioProv" id="provSi" value="si">
+                                            <label class="form-check-label" for="provSi">Sí, elegir un proveedor diferente para la OC</label>
+                                        </div>
+
+                                        <div id="divNuevoProveedor" style="display: none;" class="p-3 bg-light rounded border">
+                                            <label class="form-label fw-semibold">Seleccione el nuevo proveedor:</label>
+                                            <select id="selectNuevoProveedor" class="form-select">
+                                                <option value="">— Seleccionar Proveedor —</option>
+                                                <% if (proveedores != null) {
+                                                        for (Proveedor p : proveedores) {%>
+                                                <option value="<%= p.getIdProveedor()%>"><%= p.getRazonSocial()%></option>
+                                                <% }
+                                                    } %>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                        <button type="button" class="btn btn-primary" id="btnConfirmarOC"><i class="fas fa-check me-1"></i>Confirmar y Guardar</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                         <% }%>
 
-                        <%-- ── TABLA DE INVENTARIO ── --%>
                         <div class="card card-modern">
                             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
                                 <h5 class="mb-0"><i class="fas fa-list me-2 text-primary"></i>Inventario de Artículos</h5>
-
                                 <div class="input-group search-box">
                                     <span class="input-group-text bg-light border-end-0"><i class="fas fa-search text-muted"></i></span>
                                     <input type="text" id="buscadorArticulos" class="form-control border-start-0 ps-0" placeholder="Buscar por nombre...">
                                 </div>
-
                                 <span class="badge bg-primary"><%= articulos != null ? articulos.size() : 0%> artículos</span>
                             </div>
                             <div class="card-body p-0">
@@ -218,17 +272,18 @@
                                                 <th>Artículo</th>
                                                 <th class="text-center">Stock Actual</th>
                                                 <th class="text-center">Límite</th>
-                                                <th class="text-center">Estado Stock</th>
-                                                <th class="text-center">Requiere OC</th>
+                                                <th class="text-center">Precio Unit.</th>
+                                                <th>Proveedor</th>
+                                                <th class="text-center">Estado</th>
                                                 <% if (tieneAccesoCompleto) { %><th class="text-center">Acciones</th><% } %>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             <% if (articulos != null && !articulos.isEmpty()) {
-                                                for (Articulo a : articulos) {
-                                                    boolean alerta = "ALERTA".equals(a.getEstadoStock());
-                                                    int pct = a.getStockLimite() > 0 ? Math.min(100, a.getStock() * 100 / (a.getStockLimite() * 2)) : 100;
-                                                    String barColor = alerta ? "#dc2626" : "#16a34a";
+                                                    for (Articulo a : articulos) {
+                                                        boolean alerta = "ALERTA".equals(a.getEstadoStock());
+                                                        int pct = a.getStockLimite() > 0 ? Math.min(100, a.getStock() * 100 / (a.getStockLimite() * 2)) : 100;
+                                                        String barColor = alerta ? "#dc2626" : "#16a34a";
                                             %>
                                             <tr class="<%= alerta ? "table-warning" : ""%> fila-articulo">
                                                 <td class="px-4 fw-semibold text-primary">#<%= a.getIdArticulo()%></td>
@@ -239,14 +294,11 @@
                                                 </td>
                                                 <td class="text-center fw-bold fs-5 <%= alerta ? "text-danger" : "text-success"%>"><%= a.getStock()%></td>
                                                 <td class="text-center text-muted"><%= a.getStockLimite()%></td>
+                                                <td class="text-center fw-semibold">S/ <%= String.format("%.2f", a.getPrecio())%></td>
+                                                <td><small><%= a.getProveedor() != null ? a.getProveedor().getRazonSocial() : "Sin asignar"%></small></td>
                                                 <td class="text-center">
                                                     <span class="badge <%= alerta ? "bg-danger" : "bg-success"%>">
-                                                        <i class="fas fa-<%= alerta ? "exclamation-triangle" : "check"%> me-1"></i><%= alerta ? "ALERTA" : "OK"%>
-                                                    </span>
-                                                </td>
-                                                <td class="text-center">
-                                                    <span class="badge <%= a.isRequiereCompra() ? "bg-warning text-dark" : "bg-light text-secondary border"%>">
-                                                        <%= a.isRequiereCompra() ? "Sí" : "No"%>
+                                                        <%= alerta ? "ALERTA" : "OK"%>
                                                     </span>
                                                 </td>
                                                 <% if (tieneAccesoCompleto) {%>
@@ -261,10 +313,10 @@
                                             </tr>
                                             <% }
                                             } else {%>
-                                            <tr><td colspan="<%= tieneAccesoCompleto ? 7 : 6%>" class="text-center py-5 text-muted">
-                                                <i class="fas fa-boxes fa-3x mb-3 d-block"></i>No hay artículos registrados
-                                            </td></tr>
-                                            <% }%>
+                                            <tr><td colspan="<%= tieneAccesoCompleto ? 8 : 7%>" class="text-center py-5 text-muted">
+                                                    <i class="fas fa-boxes fa-3x mb-3 d-block"></i>No hay artículos registrados
+                                                </td></tr>
+                                                <% }%>
                                         </tbody>
                                     </table>
                                 </div>
@@ -276,39 +328,67 @@
 
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
         <script>
-            // Validación Frontend con Bootstrap
-            (() => {
-                'use strict'
-                const forms = document.querySelectorAll('.needs-validation')
-                Array.from(forms).forEach(form => {
-                    form.addEventListener('submit', event => {
-                        if (!form.checkValidity()) {
-                            event.preventDefault()
-                            event.stopPropagation()
-                        }
-                        form.classList.add('was-validated')
-                    }, false)
-                })
-            })();
+                                                           document.addEventListener("DOMContentLoaded", function () {
+                                                               const inputBuscador = document.getElementById("buscadorArticulos");
+                                                               if (inputBuscador) {
+                                                                   inputBuscador.addEventListener("keyup", function () {
+                                                                       const filtro = this.value.toLowerCase();
+                                                                       const filas = document.querySelectorAll("#tablaArticulos tbody tr.fila-articulo");
+                                                                       filas.forEach(fila => {
+                                                                           const nombreArticulo = fila.querySelector(".nombre-articulo .fw-semibold").textContent.toLowerCase();
+                                                                           fila.style.display = nombreArticulo.includes(filtro) ? "" : "none";
+                                                                       });
+                                                                   });
+                                                               }
 
-            // Buscador
-            document.addEventListener("DOMContentLoaded", function () {
-                const inputBuscador = document.getElementById("buscadorArticulos");
-                if (inputBuscador) {
-                    inputBuscador.addEventListener("keyup", function () {
-                        const filtro = this.value.toLowerCase();
-                        const filas = document.querySelectorAll("#tablaArticulos tbody tr.fila-articulo");
-                        filas.forEach(fila => {
-                            const nombreArticulo = fila.querySelector(".nombre-articulo .fw-semibold").textContent.toLowerCase();
-                            if (nombreArticulo.includes(filtro)) {
-                                fila.style.display = "";
-                            } else {
-                                fila.style.display = "none";
-                            }
-                        });
-                    });
-                }
-            });
+                                                               const formArt = document.getElementById('formArticulo');
+                                                               const radioSi = document.getElementById('provSi');
+                                                               const radioNo = document.getElementById('provNo');
+                                                               const divNuevoProv = document.getElementById('divNuevoProveedor');
+                                                               const btnConfirmarOC = document.getElementById('btnConfirmarOC');
+
+                                                               // Indicador por si ya hay una OC Pendiente
+                                                               const tieneOCPendiente = <%= tieneOCPendiente%>;
+                                                               let modalOC;
+
+                                                               if (document.getElementById('modalCrearOCAutomatica')) {
+                                                                   modalOC = new bootstrap.Modal(document.getElementById('modalCrearOCAutomatica'));
+                                                               }
+
+                                                               if (radioSi && radioNo) {
+                                                                   radioSi.addEventListener('change', () => divNuevoProv.style.display = 'block');
+                                                                   radioNo.addEventListener('change', () => divNuevoProv.style.display = 'none');
+                                                               }
+
+                                                               if (formArt) {
+                                                                   formArt.addEventListener('submit', function (e) {
+                                                                       if (!formArt.checkValidity()) {
+                                                                           e.preventDefault();
+                                                                           formArt.classList.add('was-validated');
+                                                                           return;
+                                                                       }
+
+                                                                       const stock = parseInt(formArt.querySelector('input[name="stock"]').value);
+                                                                       const limite = parseInt(formArt.querySelector('input[name="stockLimite"]').value);
+
+                                                                       // Lógica: Si el stock bajó y no se ha confirmado y no existe una OC pendiente: Mostrar Modal
+                                                                       if (stock <= limite && formArt.dataset.ocConfirmada !== 'true' && !tieneOCPendiente) {
+                                                                           e.preventDefault();
+                                                                           modalOC.show();
+                                                                       }
+                                                                   });
+                                                               }
+
+                                                               if (btnConfirmarOC) {
+                                                                   btnConfirmarOC.addEventListener('click', function () {
+                                                                       document.getElementById('flagGenerarOC').value = "true";
+                                                                       const selectProvArticulo = formArt.querySelector('select[name="idProveedor"]');
+                                                                       document.getElementById('valProveedorOC').value = radioSi.checked ? document.getElementById('selectNuevoProveedor').value : selectProvArticulo.value;
+                                                                       formArt.dataset.ocConfirmada = 'true';
+                                                                       formArt.submit();
+                                                                   });
+                                                               }
+                                                           });
         </script>
     </body>
 </html>

@@ -51,11 +51,11 @@
             List<Solicitud> solicitudes = (List<Solicitud>) request.getAttribute("solicitudes");
             List<Empleado> empleados = (List<Empleado>) request.getAttribute("empleados");
             List<Areatrabajo> areas = (List<Areatrabajo>) request.getAttribute("areas");
+            List<Articulo> articulos = (List<Articulo>) request.getAttribute("articulos"); 
             Solicitud solicitudEditar = (Solicitud) request.getAttribute("solicitudEditar");
             String errorBackend = (String) request.getAttribute("error");
             String[] estados = {"Pendiente", "Aprobada", "Rechazada", "Enviada", "Entregada"};
-        %>
-        <%
+            
             boolean esAdmin = sesion != null && ("Gerente Compras".equals(sesion.getCargo())
                     || "Administrador".equals(sesion.getCargo())
                     || "admin".equalsIgnoreCase(sesion.getUsername()));
@@ -93,21 +93,24 @@
 
                                     <div class="col-md-4">
                                         <label class="form-label fw-semibold">Empleado Solicitante</label>
-                                        <select name="idEmpleado" class="form-select" required>
-                                            <option value="">Seleccionar</option>
+                                        <select name="idEmpleado" id="selectEmpleado" class="form-select" required>
+                                            <option value="" data-area="">Seleccionar</option>
                                             <% if (empleados != null) {
                                                     for (Empleado e : empleados) {
                                                         boolean sel = solicitudEditar != null && solicitudEditar.getEmpleado() != null
-                                                                && solicitudEditar.getEmpleado().getIdEmpleado() == e.getIdEmpleado();%>
-                                            <option value="<%= e.getIdEmpleado()%>" <%= sel ? "selected" : ""%>><%= e.getNombreCompleto()%></option>
+                                                                && solicitudEditar.getEmpleado().getIdEmpleado() == e.getIdEmpleado();
+                                                        // Extraemos el ID del área para el JS
+                                                        String idAreaEmp = e.getArea() != null ? String.valueOf(e.getArea().getIdArea()) : "";
+                                            %>
+                                            <option value="<%= e.getIdEmpleado()%>" data-area="<%= idAreaEmp %>" <%= sel ? "selected" : ""%>><%= e.getNombreCompleto()%></option>
                                             <% }
                                                 } %>
                                         </select>
                                         <div class="invalid-feedback">Seleccione al empleado solicitante.</div>
                                     </div>
-                                    <div class="col-md-3">
+                                    <div class="col-md-4">
                                         <label class="form-label fw-semibold">Área de Procedencia</label>
-                                        <select name="idArea" class="form-select" required>
+                                        <select name="idArea" id="selectArea" class="form-select" required>
                                             <option value="">Seleccionar</option>
                                             <% if (areas != null) {
                                                     for (Areatrabajo a : areas) {
@@ -119,7 +122,7 @@
                                         </select>
                                         <div class="invalid-feedback">Seleccione el área.</div>
                                     </div>
-                                    <div class="col-md-2">
+                                    <div class="col-md-4">
                                         <label class="form-label fw-semibold">Estado</label>
                                         <select name="estadoSolicitud" class="form-select" <%= solicitudEditar == null ? "style='pointer-events: none; background-color: #e9ecef;'" : ""%>>
                                             <% if (solicitudEditar == null) { %>
@@ -132,22 +135,42 @@
                                                 }%>
                                         </select>
                                     </div>
-                                    <div class="col-md-6">
+                                    
+                                    <div class="col-md-8">
+                                        <label class="form-label fw-semibold">Artículo Requerido</label>
+                                        <select name="idArticulo" class="form-select" required>
+                                            <option value="">Seleccionar Artículo</option>
+                                            <% if (articulos != null) {
+                                                    for (Articulo art : articulos) {
+                                                        boolean selArt = solicitudEditar != null && solicitudEditar.getArticulo() != null
+                                                                && solicitudEditar.getArticulo().getIdArticulo() == art.getIdArticulo();
+                                            %>
+                                            <option value="<%= art.getIdArticulo()%>" <%= selArt ? "selected" : ""%>><%= art.getNombre()%></option>
+                                            <% } } %>
+                                        </select>
+                                        <div class="invalid-feedback">Seleccione un artículo de la lista.</div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-semibold">Cantidad</label>
+                                        <input type="number" name="cantidad" class="form-control" min="1" required
+                                               value="<%= solicitudEditar != null ? solicitudEditar.getCantidad() : "1"%>">
+                                        <div class="invalid-feedback">Ingrese una cantidad válida mayor a 0.</div>
+                                    </div>
+
+                                    <div class="col-md-10">
                                         <label class="form-label fw-semibold">Descripción / Motivo</label>
                                         <textarea name="descripcion" class="form-control" rows="2" required
                                                   placeholder="Describa el motivo de la solicitud..."><%= solicitudEditar != null && solicitudEditar.getDescripcion() != null ? solicitudEditar.getDescripcion() : ""%></textarea>
                                         <div class="invalid-feedback">Debe proveer un motivo o descripción para la solicitud.</div>
                                     </div>
-                                    <div class="col-md-2 d-flex align-items-end">
+                                    <div class="col-md-2 d-flex align-items-end flex-column justify-content-end gap-2">
                                         <button type="submit" class="btn btn-primary w-100">
                                             <i class="fas fa-save me-1"></i><%= solicitudEditar != null ? "Actualizar" : "Registrar"%>
                                         </button>
-                                    </div>
-                                    <% if (solicitudEditar != null) { %>
-                                    <div class="col-md-2 d-flex align-items-end">
+                                        <% if (solicitudEditar != null) { %>
                                         <a href="${pageContext.request.contextPath}/SolicitudServlet?accion=listar" class="btn btn-secondary w-100">Cancelar</a>
+                                        <% }%>
                                     </div>
-                                    <% }%>
                                 </form>
                             </div>
                         </div>
@@ -161,35 +184,42 @@
                                 <div class="table-responsive">
                                     <table class="table table-hover mb-0">
                                         <thead class="bg-light">
-                                            <tr><th class="px-4">#</th><th>Solicitante</th><th>Área</th><th>Fecha</th><th class="text-center">Estado</th><th>Descripción</th><th class="text-center">Acciones</th></tr>
+                                            <tr>
+                                                <th class="px-4">#</th>
+                                                <th>Solicitante / Área</th>
+                                                <th>Artículo Requerido</th>
+                                                <th class="text-center">Cant.</th>
+                                                <th>Fecha</th>
+                                                <th class="text-center">Estado</th>
+                                                <th class="text-center">Acciones</th>
+                                            </tr>
                                         </thead>
                                         <tbody>
                                             <% if (solicitudes != null && !solicitudes.isEmpty()) {
                                                     for (Solicitud s : solicitudes) {
                                                         String badgeClass;
                                                         switch (s.getEstadoSolicitud() != null ? s.getEstadoSolicitud() : "") {
-                                                            case "Aprobada":
-                                                                badgeClass = "bg-success";
-                                                                break;
-                                                            case "Rechazada":
-                                                                badgeClass = "bg-danger";
-                                                                break;
-                                                            case "Enviada":
-                                                                badgeClass = "bg-info";
-                                                                break;
-                                                            case "Entregada":
-                                                                badgeClass = "bg-primary";
-                                                                break;
-                                                            default:
-                                                                badgeClass = "bg-warning text-dark";
+                                                            case "Aprobada": badgeClass = "bg-success"; break;
+                                                            case "Rechazada": badgeClass = "bg-danger"; break;
+                                                            case "Enviada": badgeClass = "bg-info"; break;
+                                                            case "Entregada": badgeClass = "bg-primary"; break;
+                                                            default: badgeClass = "bg-warning text-dark";
                                                         }%>
                                             <tr>
                                                 <td class="px-4 fw-semibold text-primary">#<%= s.getIdSolicitud()%></td>
-                                                <td><div class="fw-semibold"><%= s.getEmpleado() != null ? s.getEmpleado().getNombreCompleto() : "—"%></div></td>
-                                                <td><%= s.getArea() != null ? s.getArea().getNombreArea() : "—"%></td>
+                                                <td>
+                                                    <div class="fw-semibold"><%= s.getEmpleado() != null ? s.getEmpleado().getNombreCompleto() : "—"%></div>
+                                                    <small class="text-muted"><%= s.getArea() != null ? s.getArea().getNombreArea() : "—"%></small>
+                                                </td>
+                                                <td>
+                                                    <div class="fw-semibold"><%= s.getArticulo() != null ? s.getArticulo().getNombre() : "—"%></div>
+                                                    <small class="text-muted text-truncate d-inline-block" style="max-width: 150px;" title="<%= s.getDescripcion() != null ? s.getDescripcion() : "" %>">
+                                                        <%= s.getDescripcion() != null ? s.getDescripcion() : "" %>
+                                                    </small>
+                                                </td>
+                                                <td class="text-center fw-bold"><%= s.getCantidad()%></td>
                                                 <td><small class="text-muted"><%= s.getFechaSolicitud() != null ? s.getFechaSolicitud().toString().replace("T", " ").substring(0, 16) : "—"%></small></td>
                                                 <td class="text-center"><span class="badge <%= badgeClass%>"><%= s.getEstadoSolicitud()%></span></td>
-                                                <td><small><%= s.getDescripcion() != null ? s.getDescripcion() : ""%></small></td>
                                                 <td class="text-center">
                                                     <a href="${pageContext.request.contextPath}/SolicitudServlet?accion=editar&id=<%= s.getIdSolicitud()%>"
                                                        class="btn btn-sm btn-outline-primary me-1"><i class="fas fa-edit"></i></a>
@@ -214,19 +244,38 @@
             </div></div>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
         <script>
-                                                           // Validación Frontend con Bootstrap
-                                                           (() => {
-                                                               'use strict'
-                                                               const forms = document.querySelectorAll('.needs-validation')
-                                                               Array.from(forms).forEach(form => {
-                                                                   form.addEventListener('submit', event => {
-                                                                       if (!form.checkValidity()) {
-                                                                           event.preventDefault()
-                                                                           event.stopPropagation()
-                                                                       }
-                                                                       form.classList.add('was-validated')
-                                                                   }, false)
-                                                               })
-                                                           })()
+            // Validación Frontend con Bootstrap
+            (() => {
+                'use strict'
+                const forms = document.querySelectorAll('.needs-validation')
+                Array.from(forms).forEach(form => {
+                    form.addEventListener('submit', event => {
+                        if (!form.checkValidity()) {
+                            event.preventDefault()
+                            event.stopPropagation()
+                        }
+                        form.classList.add('was-validated')
+                    }, false)
+                })
+            })();
+
+            // Autocompletado del Área al seleccionar el Empleado
+            document.addEventListener("DOMContentLoaded", function() {
+                const empSelect = document.getElementById('selectEmpleado');
+                const areaSelect = document.getElementById('selectArea');
+
+                if (empSelect && areaSelect) {
+                    empSelect.addEventListener('change', function() {
+                        const selectedOption = this.options[this.selectedIndex];
+                        const idArea = selectedOption.getAttribute('data-area');
+                        
+                        if (idArea) {
+                            areaSelect.value = idArea;
+                        } else {
+                            areaSelect.value = "";
+                        }
+                    });
+                }
+            });
         </script>
     </body></html>

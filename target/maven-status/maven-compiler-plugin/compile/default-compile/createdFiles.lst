@@ -7,6 +7,7 @@ controlador\EmpleadoServlet.class
 modelo\Solicitud.class
 controlador\AreaTrabajoServlet.class
 modelo\Ordencompra.class
+servicios\PeruApiService.class
 controlador\LogoutServlet.class
 modelo\ConformidadDAO.class
 controlador\MenuServlet.class
