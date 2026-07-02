@@ -28,7 +28,8 @@ public class ConformidadServlet extends HttpServlet {
                 request.getRequestDispatcher("/WEB-INF/vistas/conformidad.jsp").forward(request, response);
 
             } else if (accion.equals("editar")) {
-                if (esEmpleado(sesion)) {
+                // Bloqueo para Empleado y Asistente Almacén
+                if (esEmpleado(sesion) || esAsistenteAlmacen(sesion)) {
                     response.sendError(HttpServletResponse.SC_FORBIDDEN);
                     return;
                 }
@@ -37,7 +38,8 @@ public class ConformidadServlet extends HttpServlet {
                 request.getRequestDispatcher("/WEB-INF/vistas/conformidad.jsp").forward(request, response);
 
             } else if (accion.equals("eliminar")) {
-                if (esEmpleado(sesion)) {
+                // Bloqueo para Empleado y Asistente Almacén
+                if (esEmpleado(sesion) || esAsistenteAlmacen(sesion)) {
                     response.sendError(HttpServletResponse.SC_FORBIDDEN);
                     return;
                 }
@@ -68,12 +70,17 @@ public class ConformidadServlet extends HttpServlet {
         Empleado sesion = (Empleado) request.getSession().getAttribute("empleado");
 
         try {
+            // Bloqueo total de POST para Asistente Almacén
+            if (esAsistenteAlmacen(sesion)) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN);
+                return;
+            }
+
             if ("actualizar".equals(accion) && esEmpleado(sesion)) {
                 response.sendError(HttpServletResponse.SC_FORBIDDEN);
                 return;
             }
 
-            // Validaciones Estrictas Backend
             if (accion != null && (accion.equals("guardar") || accion.equals("actualizar"))) {
                 String comentarios = request.getParameter("comentarios");
                 String idSolStr = request.getParameter("idSolicitud");
@@ -112,7 +119,6 @@ public class ConformidadServlet extends HttpServlet {
                 }
             }
 
-            // LÓGICA DE CONTROL DE STOCK
             Conformidad c;
             boolean descontarStock = false;
             boolean devolverStock = false;
@@ -122,21 +128,12 @@ public class ConformidadServlet extends HttpServlet {
                 c = dao.buscar(Integer.parseInt(request.getParameter("idConformidad")));
                 boolean eraConforme = c.isFirmaConformidad();
 
-                // Si antes no estaba firmado y ahora sí -> Descontar
-                if (!eraConforme && esConformeNuevo) {
-                    descontarStock = true;
-                }
-                // Si antes estaba firmado y ahora se le quita la firma (rechazado) -> Devolver
-                if (eraConforme && !esConformeNuevo) {
-                    devolverStock = true;
-                }
+                if (!eraConforme && esConformeNuevo) descontarStock = true;
+                if (eraConforme && !esConformeNuevo) devolverStock = true;
 
             } else {
                 c = new Conformidad();
-                // Si es nuevo y nace firmado -> Descontar
-                if (esConformeNuevo) {
-                    descontarStock = true;
-                }
+                if (esConformeNuevo) descontarStock = true;
             }
 
             c.setFirmaConformidad(esConformeNuevo);
@@ -161,31 +158,27 @@ public class ConformidadServlet extends HttpServlet {
                 }
             }
 
-            // VALIDACIÓN: CONTROL DE STOCK INSUFICIENTE
             if (descontarStock && c.getSolicitud() != null && c.getSolicitud().getArticulo() != null) {
-                // Buscamos el artículo para verificar su stock real actual
                 Articulo articuloVerificar = artDAO.buscar(c.getSolicitud().getArticulo().getIdArticulo());
                 int stockDisponible = articuloVerificar.getStock();
                 int cantidadRequerida = c.getSolicitud().getCantidad();
 
-                // Si no hay suficiente stock en almacén, rebotamos la operación
                 if (stockDisponible < cantidadRequerida) {
                     String mensajeError = "Error: No se puede procesar la conformidad. El stock actual de '"
                             + articuloVerificar.getNombre() + "' es de " + stockDisponible
                             + " unidades, pero la solicitud requiere " + cantidadRequerida + ".";
 
                     enviarErrorYRetornar(request, response, dao, solDAO, empDAO, accion, mensajeError);
-                    return; // Detiene la ejecución por completo para que no guarde nada
+                    return;
                 }
             }
             
-            // Si pasa la validación, recién procedemos a guardar en la base de datos
             if ("actualizar".equals(accion)) {
                 dao.actualizar(c);
             } else {
                 dao.guardar(c);
             }
-            // EJECUTAMOS EL MOVIMIENTO DE STOCK Y CAMBIO DE ESTADO
+
             if (c.getSolicitud() != null) {
                 if (descontarStock || devolverStock) {
                     if (c.getSolicitud().getArticulo() != null) {
@@ -214,7 +207,6 @@ public class ConformidadServlet extends HttpServlet {
 
             response.sendRedirect("ConformidadServlet?accion=listar");
             
-           
         } finally {
             dao.close();
             solDAO.close();
@@ -223,7 +215,6 @@ public class ConformidadServlet extends HttpServlet {
         }
     }
     
-    // Método auxiliar para manejo de errores
     private void enviarErrorYRetornar(HttpServletRequest request, HttpServletResponse response, ConformidadDAO dao, SolicitudDAO solDAO, EmpleadoDAO empDAO, String accion, String mensajeError) throws ServletException, IOException {
         request.setAttribute("error", mensajeError);
         Empleado sesion = (Empleado) request.getSession().getAttribute("empleado");
@@ -252,6 +243,12 @@ public class ConformidadServlet extends HttpServlet {
         if (sesion == null) return false;
         String cargo = sesion.getCargo() != null ? sesion.getCargo() : "";
         return cargo.equalsIgnoreCase("Empleado");
+    }
+
+    private boolean esAsistenteAlmacen(Empleado sesion) {
+        if (sesion == null) return false;
+        String cargo = sesion.getCargo() != null ? sesion.getCargo() : "";
+        return cargo.equalsIgnoreCase("Asistente Almacén") || cargo.equalsIgnoreCase("Asistente Almacen");
     }
 
     private boolean esSolicitudDelEmpleado(Solicitud solicitud, Empleado empleado) {
