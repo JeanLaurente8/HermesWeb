@@ -13,6 +13,14 @@ public class ConformidadDAO {
     public List<Conformidad> listar() {
         return em.createQuery("SELECT c FROM Conformidad c ORDER BY c.fechaConformidad DESC", Conformidad.class).getResultList();
     }
+
+    public List<Conformidad> listarPorEmpleado(int idEmpleado) {
+        return em.createQuery(
+            "SELECT c FROM Conformidad c WHERE c.empleado.idEmpleado = :id ORDER BY c.fechaConformidad DESC",
+            Conformidad.class)
+            .setParameter("id", idEmpleado)
+            .getResultList();
+    }
  
     public Conformidad buscar(int id) {
         return em.find(Conformidad.class, id);

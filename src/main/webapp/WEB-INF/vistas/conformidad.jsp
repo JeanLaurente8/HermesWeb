@@ -62,6 +62,7 @@
             List<Empleado> empleados = (List<Empleado>) request.getAttribute("empleados");
             Conformidad conformidadEditar = (Conformidad) request.getAttribute("conformidadEditar");
             String errorBackend = (String) request.getAttribute("error");
+            boolean esEmpleadoSesion = sesion != null && "Empleado".equalsIgnoreCase(sesion.getCargo());
         %>
         <%
             boolean esAdmin = sesion != null && ("Gerente Compras".equals(sesion.getCargo())
@@ -133,7 +134,12 @@
                                     </div>
 
                                     <div class="col-md-4">
-                                        <label class="form-label fw-semibold">Empleado Receptor</label>
+                                        <label class="form-label fw-semibold">Empleado</label>
+                                        <% if (esEmpleadoSesion) { %>
+                                        <input type="hidden" name="idEmpleado" value="<%= sesion.getIdEmpleado()%>">
+                                        <input type="text" class="form-control bg-light" readonly tabindex="-1"
+                                               value="<%= sesion.getNombreCompleto()%>">
+                                        <% } else { %>
                                         <select name="idEmpleado" class="form-select" required>
                                             <option value="">Seleccionar empleado</option>
                                             <% if (empleados != null) {
@@ -144,7 +150,8 @@
                                             <% }
                                                 }%>
                                         </select>
-                                        <div class="invalid-feedback">Por favor, seleccione el empleado receptor.</div>
+                                        <% } %>
+                                        <div class="invalid-feedback">Por favor, seleccione el empleado.</div>
                                     </div>
 
                                     <div class="col-md-8 d-flex align-items-center">
@@ -189,7 +196,7 @@
                                             <tr>
                                                 <th class="px-4">#</th>
                                                 <th>Solicitud</th>
-                                                <th>Receptor</th>
+                                                <th>Empleado</th>
                                                 <th>Artículo Entregado</th>
                                                 <th>Fecha</th>
                                                 <th class="text-center">Estado</th>
@@ -227,12 +234,13 @@
                                                 </td>
                                                 <td><small class="text-truncate d-inline-block" style="max-width: 150px;" title="<%= c.getComentarios() != null ? c.getComentarios() : ""%>"><%= c.getComentarios() != null ? c.getComentarios() : ""%></small></td>
                                                 <td class="text-center">
+                                                    <% if (!esEmpleadoSesion) { %>
                                                     <a href="${pageContext.request.contextPath}/ConformidadServlet?accion=editar&id=<%= c.getIdConformidad()%>"
                                                        class="btn btn-sm btn-outline-primary me-1"><i class="fas fa-edit"></i></a>
                                                     <a href="${pageContext.request.contextPath}/ConformidadServlet?accion=eliminar&id=<%= c.getIdConformidad()%>"
                                                        class="btn btn-sm btn-outline-danger"
                                                        onclick="return confirm('¿Eliminar conformidad #<%= c.getIdConformidad()%>?')"><i class="fas fa-trash"></i></a>
-                                                </td>
+                                                    <% } %> </td>
                                             </tr>
                                             <% }
                                             } else { %>
@@ -265,7 +273,6 @@
                                                                })
                                                            })();
 
-                                                           // SCRIPT PARA AUTOCOMPLETAR ARTÍCULO Y CANTIDAD
                                                            document.addEventListener("DOMContentLoaded", function () {
                                                                const selectSolicitud = document.getElementById('selectSolicitud');
                                                                const displayArticulo = document.getElementById('displayArticulo');
@@ -282,7 +289,6 @@
                                                                    });
                                                                }
 
-                                                               // SCRIPT PARA EL CHECKBOX (Conforme/Rechazado dinámico)
                                                                const checkboxFirma = document.getElementById('firma');
                                                                const labelFirma = document.getElementById('labelFirma');
 

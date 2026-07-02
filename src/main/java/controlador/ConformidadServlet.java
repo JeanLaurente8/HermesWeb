@@ -20,22 +20,27 @@ public class ConformidadServlet extends HttpServlet {
         ConformidadDAO dao = new ConformidadDAO();
         SolicitudDAO solDAO = new SolicitudDAO();
         EmpleadoDAO empDAO = new EmpleadoDAO();
+        Empleado sesion = (Empleado) request.getSession().getAttribute("empleado");
 
         try {
             if (accion == null || accion.equals("listar")) {
-                request.setAttribute("conformidades", dao.listar());
-                request.setAttribute("solicitudes", solDAO.listar());
-                request.setAttribute("empleados", empDAO.listar());
+                cargarListado(request, dao, solDAO, empDAO, sesion);
                 request.getRequestDispatcher("/WEB-INF/vistas/conformidad.jsp").forward(request, response);
 
             } else if (accion.equals("editar")) {
+                if (esEmpleado(sesion)) {
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN);
+                    return;
+                }
                 request.setAttribute("conformidadEditar", dao.buscar(Integer.parseInt(request.getParameter("id"))));
-                request.setAttribute("conformidades", dao.listar());
-                request.setAttribute("solicitudes", solDAO.listar());
-                request.setAttribute("empleados", empDAO.listar());
+                cargarListado(request, dao, solDAO, empDAO, sesion);
                 request.getRequestDispatcher("/WEB-INF/vistas/conformidad.jsp").forward(request, response);
 
             } else if (accion.equals("eliminar")) {
+                if (esEmpleado(sesion)) {
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN);
+                    return;
+                }
                 dao.eliminar(Integer.parseInt(request.getParameter("id")));
                 response.sendRedirect("ConformidadServlet?accion=listar");
             }
@@ -60,8 +65,14 @@ public class ConformidadServlet extends HttpServlet {
         SolicitudDAO solDAO = new SolicitudDAO();
         EmpleadoDAO empDAO = new EmpleadoDAO();
         ArticuloDAO artDAO = new ArticuloDAO();
+        Empleado sesion = (Empleado) request.getSession().getAttribute("empleado");
 
         try {
+            if ("actualizar".equals(accion) && esEmpleado(sesion)) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN);
+                return;
+            }
+
             // Validaciones Estrictas Backend
             if (accion != null && (accion.equals("guardar") || accion.equals("actualizar"))) {
                 String comentarios = request.getParameter("comentarios");
@@ -133,12 +144,21 @@ public class ConformidadServlet extends HttpServlet {
 
             String idSol = request.getParameter("idSolicitud");
             if (idSol != null && !idSol.isEmpty()) {
-                c.setSolicitud(solDAO.buscar(Integer.parseInt(idSol)));
+                Solicitud solicitud = solDAO.buscar(Integer.parseInt(idSol));
+                if (esEmpleado(sesion) && !esSolicitudDelEmpleado(solicitud, sesion)) {
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN);
+                    return;
+                }
+                c.setSolicitud(solicitud);
             }
 
-            String idEmp = request.getParameter("idEmpleado");
-            if (idEmp != null && !idEmp.isEmpty()) {
-                c.setEmpleado(empDAO.buscar(Integer.parseInt(idEmp)));
+            if (esEmpleado(sesion)) {
+                c.setEmpleado(sesion);
+            } else {
+                String idEmp = request.getParameter("idEmpleado");
+                if (idEmp != null && !idEmp.isEmpty()) {
+                    c.setEmpleado(empDAO.buscar(Integer.parseInt(idEmp)));
+                }
             }
 
             // VALIDACIÓN: CONTROL DE STOCK INSUFICIENTE
@@ -206,9 +226,8 @@ public class ConformidadServlet extends HttpServlet {
     // Método auxiliar para manejo de errores
     private void enviarErrorYRetornar(HttpServletRequest request, HttpServletResponse response, ConformidadDAO dao, SolicitudDAO solDAO, EmpleadoDAO empDAO, String accion, String mensajeError) throws ServletException, IOException {
         request.setAttribute("error", mensajeError);
-        request.setAttribute("conformidades", dao.listar());
-        request.setAttribute("solicitudes", solDAO.listar());
-        request.setAttribute("empleados", empDAO.listar());
+        Empleado sesion = (Empleado) request.getSession().getAttribute("empleado");
+        cargarListado(request, dao, solDAO, empDAO, sesion);
 
         if (accion.equals("actualizar")) {
             Conformidad c = dao.buscar(Integer.parseInt(request.getParameter("idConformidad")));
@@ -216,6 +235,30 @@ public class ConformidadServlet extends HttpServlet {
         }
 
         request.getRequestDispatcher("/WEB-INF/vistas/conformidad.jsp").forward(request, response);
+    }
+
+    private void cargarListado(HttpServletRequest request, ConformidadDAO dao, SolicitudDAO solDAO, EmpleadoDAO empDAO, Empleado sesion) {
+        if (esEmpleado(sesion)) {
+            request.setAttribute("conformidades", dao.listarPorEmpleado(sesion.getIdEmpleado()));
+            request.setAttribute("solicitudes", solDAO.listarPorEmpleado(sesion.getIdEmpleado()));
+        } else {
+            request.setAttribute("conformidades", dao.listar());
+            request.setAttribute("solicitudes", solDAO.listar());
+        }
+        request.setAttribute("empleados", empDAO.listar());
+    }
+
+    private boolean esEmpleado(Empleado sesion) {
+        if (sesion == null) return false;
+        String cargo = sesion.getCargo() != null ? sesion.getCargo() : "";
+        return cargo.equalsIgnoreCase("Empleado");
+    }
+
+    private boolean esSolicitudDelEmpleado(Solicitud solicitud, Empleado empleado) {
+        return solicitud != null
+            && solicitud.getEmpleado() != null
+            && empleado != null
+            && solicitud.getEmpleado().getIdEmpleado() == empleado.getIdEmpleado();
     }
 
     private boolean verificarSesion(HttpServletRequest req, HttpServletResponse res) throws IOException {

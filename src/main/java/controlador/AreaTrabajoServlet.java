@@ -1,6 +1,7 @@
 package controlador;
 
 import modelo.*;
+import util.AuthUtils;
 import javax.servlet.*;
 import javax.servlet.http.*;
 import java.io.IOException;
@@ -13,6 +14,9 @@ public class AreaTrabajoServlet extends HttpServlet {
             throws ServletException, IOException {
 
         if (!verificarSesion(request, response)) {
+            return;
+        }
+        if (!puedeAccederAreas(request, response)) {
             return;
         }
 
@@ -45,6 +49,9 @@ public class AreaTrabajoServlet extends HttpServlet {
             throws ServletException, IOException {
 
         if (!verificarSesion(request, response)) {
+            return;
+        }
+        if (!puedeAccederAreas(request, response)) {
             return;
         }
 
@@ -136,6 +143,15 @@ public class AreaTrabajoServlet extends HttpServlet {
         HttpSession s = req.getSession(false);
         if (s == null || s.getAttribute("empleado") == null) {
             res.sendRedirect("LoginServlet");
+            return false;
+        }
+        return true;
+    }
+
+    private boolean puedeAccederAreas(HttpServletRequest req, HttpServletResponse res) throws IOException {
+        Empleado empleado = (Empleado) req.getSession().getAttribute("empleado");
+        if (!AuthUtils.puedeVerModulo(empleado, "Areas")) {
+            res.sendError(HttpServletResponse.SC_FORBIDDEN);
             return false;
         }
         return true;
