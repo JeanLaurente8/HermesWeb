@@ -4,6 +4,7 @@ import modelo.*;
 import javax.servlet.*;
 import javax.servlet.http.*;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.List;
 
 public class ArticuloServlet extends HttpServlet {
@@ -32,14 +33,15 @@ public class ArticuloServlet extends HttpServlet {
                 request.setAttribute("articulos", dao.listar());
                 request.setAttribute("proveedores", provDAO.listarActivos());
 
-                // Verificamos si existe OC para no mostrar modal si es duplicado
                 OrdenCompraDAO ocDAO = new OrdenCompraDAO();
                 boolean tieneOC = ocDAO.existeOCAutomaticaParaArticulo(art.getNombre());
+                Integer ultimaCantidadPedida = ocDAO.buscarUltimaCantidadPedida(art.getIdArticulo());
                 ocDAO.close();
                 request.setAttribute("tieneOCPendiente", tieneOC);
+                request.setAttribute("ultimaCantidadPedida", ultimaCantidadPedida);
 
                 request.getRequestDispatcher("/WEB-INF/vistas/articulo.jsp").forward(request, response);
-                
+
             } else if (accion.equals("eliminar")) {
                 dao.eliminar(Integer.parseInt(request.getParameter("id")));
                 response.sendRedirect("ArticuloServlet?accion=listar");
@@ -112,7 +114,7 @@ public class ArticuloServlet extends HttpServlet {
             }
 
             int stock = 0, stockLimite = 0;
-            double precio = 0.0;
+            BigDecimal precio = BigDecimal.ZERO;
             try {
                 stock = Integer.parseInt(request.getParameter("stock"));
             } catch (NumberFormatException ex) {
@@ -122,8 +124,8 @@ public class ArticuloServlet extends HttpServlet {
             } catch (NumberFormatException ex) {
             }
             try {
-                precio = Double.parseDouble(request.getParameter("precio"));
-            } catch (NumberFormatException ex) {
+                precio = new BigDecimal(request.getParameter("precio"));
+            } catch (Exception ex) {
             }
 
             String idProvStr = request.getParameter("idProveedor");
@@ -166,10 +168,22 @@ public class ArticuloServlet extends HttpServlet {
                 try {
                     // Verificar OC pendiente para evitar duplicados
                     if (ocDAO.existeOCAutomaticaParaArticulo(nombre.trim())) {
-                        request.getSession().setAttribute("ocAdvertencia", 
-                            "El artículo \"" + nombre.trim() + "\" requiere reposición, pero ya cuenta con una Orden de Compra en proceso. No se generó una OC duplicada.");
+                        request.getSession().setAttribute("ocAdvertencia",
+                                "El artículo \"" + nombre.trim() + "\" requiere reposición, pero ya cuenta con una Orden de Compra en proceso. No se generó una OC duplicada.");
                     } else if ("true".equals(generarOC)) {
-                        
+
+                        // Cantidad a pedir ingresada en el modal. Si no llega o es
+                        // inválida, usamos 1 como respaldo para no romper la OC.
+                        int cantidadOC;
+                        try {
+                            cantidadOC = Integer.parseInt(request.getParameter("cantidadOC"));
+                        } catch (NumberFormatException ex) {
+                            cantidadOC = 1;
+                        }
+                        if (cantidadOC <= 0) {
+                            cantidadOC = 1;
+                        }
+
                         Empleado analista = ocDAO.obtenerAnalista();
                         Empleado gerente = ocDAO.obtenerGerente();
 
@@ -190,11 +204,17 @@ public class ArticuloServlet extends HttpServlet {
                             oc.setProveedor(proveedorSeleccionado);
                         }
 
+                        // ── LIGAR ARTÍCULO + CANTIDAD A LA OC (detalle_oc) ──────
+                        DetalleOc detalle = new DetalleOc();
+                        detalle.setArticulo(a);
+                        detalle.setCantidad(cantidadOC);
+                        oc.addDetalle(detalle);
+
                         ocDAO.guardar(oc);
 
                         request.getSession().setAttribute("ocGenerada",
                                 "Se generó automáticamente una OC en estado 'En Revisión' "
-                                + "para el artículo \"" + nombre.trim() + "\".");
+                                + "para el artículo \"" + nombre.trim() + "\" por " + cantidadOC + " unidad(es).");
                         request.getSession().setAttribute("ocIdGenerada", oc.getIdOrden());
                     }
                 } finally {

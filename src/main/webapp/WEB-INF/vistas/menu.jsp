@@ -133,8 +133,9 @@
                         <% } %>
 
                         <div class="row g-3">
+                            <!-- Fila 1 — Inventario -->
                             <% if (AuthUtils.puedeVerModulo(sesion, "Articulos")) { %>
-                            <div class="col-md-4 col-lg-3">
+                            <div class="col-md-4 col-lg-4">
                                 <a href="${pageContext.request.contextPath}/ArticuloServlet?accion=listar" class="card-modern card p-3">
                                     <div class="card-icon-wrap bg-primary bg-opacity-10 mb-3"><i class="fas fa-boxes text-primary"></i></div>
                                     <h6 class="fw-bold mb-1">Artículos</h6>
@@ -147,7 +148,7 @@
                             <% } %>
 
                             <% if (AuthUtils.puedeVerModulo(sesion, "Solicitudes")) { %>
-                            <div class="col-md-4 col-lg-3">
+                            <div class="col-md-4 col-lg-4">
                                 <a href="${pageContext.request.contextPath}/SolicitudServlet?accion=listar" class="card-modern card p-3">
                                     <div class="card-icon-wrap bg-success bg-opacity-10 mb-3"><i class="fas fa-clipboard-list text-success"></i></div>
                                     <h6 class="fw-bold mb-1">Solicitudes</h6>
@@ -156,8 +157,19 @@
                             </div>
                             <% } %>
 
+                            <% if (AuthUtils.puedeVerModulo(sesion, "Devolucion")) { %>
+                            <div class="col-md-4 col-lg-4">
+                                <a href="${pageContext.request.contextPath}/DevolucionServlet" class="card-modern card p-3">
+                                    <div class="card-icon-wrap bg-teal bg-opacity-10 mb-3" style="background:rgba(13,148,136,.1)"><i class="fas fa-undo" style="color:#0d9488"></i></div>
+                                    <h6 class="fw-bold mb-1">Devolución</h6>
+                                    <small class="text-muted">Devolución de artículos</small>
+                                </a>
+                            </div>
+                            <% } %>
+
+                            <!-- Fila 2 — Compras -->
                             <% if (AuthUtils.puedeVerModulo(sesion, "OrdenesCompra")) { %>
-                            <div class="col-md-4 col-lg-3">
+                            <div class="col-md-4 col-lg-4">
                                 <a href="${pageContext.request.contextPath}/OrdenCompraServlet?accion=listar" class="card-modern card p-3">
                                     <div class="card-icon-wrap bg-warning bg-opacity-10 mb-3"><i class="fas fa-shopping-cart text-warning"></i></div>
                                     <h6 class="fw-bold mb-1">Órdenes de Compra</h6>
@@ -167,7 +179,7 @@
                             <% } %>
 
                             <% if (AuthUtils.puedeVerModulo(sesion, "Conformidad")) { %>
-                            <div class="col-md-4 col-lg-3">
+                            <div class="col-md-4 col-lg-4">
                                 <a href="${pageContext.request.contextPath}/ConformidadServlet?accion=listar" class="card-modern card p-3">
                                     <div class="card-icon-wrap bg-info bg-opacity-10 mb-3"><i class="fas fa-check-circle text-info"></i></div>
                                     <h6 class="fw-bold mb-1">Conformidad</h6>
@@ -176,8 +188,19 @@
                             </div>
                             <% } %>
 
+                            <% if (AuthUtils.puedeVerModulo(sesion, "Abastecimiento")) { %>
+                            <div class="col-md-4 col-lg-4">
+                                <a href="${pageContext.request.contextPath}/AbastecimientoServlet" class="card-modern card p-3">
+                                    <div class="card-icon-wrap bg-primary bg-opacity-10 mb-3"><i class="fas fa-truck-loading text-primary"></i></div>
+                                    <h6 class="fw-bold mb-1">Abastecimiento</h6>
+                                    <small class="text-muted">Ingreso de mercadería</small>
+                                </a>
+                            </div>
+                            <% } %>
+
+                            <!-- Fila 3 — Administración -->
                             <% if (AuthUtils.puedeVerModulo(sesion, "Areas")) { %>
-                            <div class="col-md-4 col-lg-3">
+                            <div class="col-md-4 col-lg-4">
                                 <a href="${pageContext.request.contextPath}/AreaTrabajoServlet?accion=listar" class="card-modern card p-3">
                                     <div class="card-icon-wrap bg-dark bg-opacity-10 mb-3"><i class="fas fa-building text-dark"></i></div>
                                     <h6 class="fw-bold mb-1">Áreas de Trabajo</h6>
@@ -187,7 +210,7 @@
                             <% } %>
 
                             <% if (AuthUtils.puedeVerModulo(sesion, "Proveedores")) { %>
-                            <div class="col-md-4 col-lg-3">
+                            <div class="col-md-4 col-lg-4">
                                 <a href="${pageContext.request.contextPath}/ProveedorServlet?accion=listar" class="card-modern card p-3">
                                     <div class="card-icon-wrap bg-secondary bg-opacity-10 mb-3"><i class="fas fa-truck text-secondary"></i></div>
                                     <h6 class="fw-bold mb-1">Proveedores</h6>
@@ -197,7 +220,7 @@
                             <% } %>
 
                             <% if (AuthUtils.puedeVerModulo(sesion, "Empleados")) { %>
-                            <div class="col-md-4 col-lg-3">
+                            <div class="col-md-4 col-lg-4">
                                 <a href="${pageContext.request.contextPath}/EmpleadoServlet?accion=listar" class="card-modern card p-3">
                                     <div class="card-icon-wrap bg-danger bg-opacity-10 mb-3"><i class="fas fa-users text-danger"></i></div>
                                     <h6 class="fw-bold mb-1">Empleados</h6>
@@ -205,8 +228,7 @@
                                 </a>
                             </div>
                             <% }%>
-                        </div>
-                    </div>
+                        </div>                    </div>
                 </div>
             </div>
         </div>

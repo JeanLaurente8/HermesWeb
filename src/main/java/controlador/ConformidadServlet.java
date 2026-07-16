@@ -149,14 +149,7 @@ public class ConformidadServlet extends HttpServlet {
                 c.setSolicitud(solicitud);
             }
 
-            if (esEmpleado(sesion)) {
-                c.setEmpleado(sesion);
-            } else {
-                String idEmp = request.getParameter("idEmpleado");
-                if (idEmp != null && !idEmp.isEmpty()) {
-                    c.setEmpleado(empDAO.buscar(Integer.parseInt(idEmp)));
-                }
-            }
+            c.setEmpleado(sesion);
 
             if (descontarStock && c.getSolicitud() != null && c.getSolicitud().getArticulo() != null) {
                 Articulo articuloVerificar = artDAO.buscar(c.getSolicitud().getArticulo().getIdArticulo());

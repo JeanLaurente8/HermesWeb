@@ -76,6 +76,8 @@
                 tieneOCPendiente = false;
             }
 
+            Integer ultimaCantidadPedida = (Integer) request.getAttribute("ultimaCantidadPedida");
+
             boolean tieneAccesoCompleto = AuthUtils.tieneAccesoCompleto(sesion, "Articulos");
 
             int totalAlertas = 0;
@@ -162,6 +164,7 @@
 
                                     <input type="hidden" name="generarOC" id="flagGenerarOC" value="false">
                                     <input type="hidden" name="idProveedorOC" id="valProveedorOC" value="">
+                                    <input type="hidden" name="cantidadOC" id="valCantidadOC" value="">
 
                                     <div class="col-md-3">
                                         <label class="form-label fw-semibold">Nombre del Artículo</label>
@@ -222,6 +225,13 @@
                                     </div>
                                     <div class="modal-body text-start">
                                         <p>El stock que estás guardando es menor o igual al límite. Se generará una <strong>Orden de Compra Automática</strong>.</p>
+
+                                        <div class="mb-3">
+                                            <label class="form-label fw-semibold">Cantidad a Pedir</label>
+                                            <input type="number" id="inputCantidadOC" class="form-control" min="1" value="1" required>
+                                            <div class="form-text text-muted">Unidades que se solicitarán al proveedor. Esta cantidad quedará ligada al artículo en la OC y se usará luego para aumentar el stock al recepcionarla en Abastecimiento.</div>
+                                        </div>
+
                                         <p class="fw-semibold mb-2 mt-3">¿Requiere cambio de proveedor para esta OC?</p>
 
                                         <div class="form-check mb-2">
@@ -349,10 +359,30 @@
 
                                                                // Indicador por si ya hay una OC Pendiente
                                                                const tieneOCPendiente = <%= tieneOCPendiente%>;
+                                                               const ultimaCantidadPedida = <%= ultimaCantidadPedida != null ? ultimaCantidadPedida : "null"%>;
                                                                let modalOC;
 
-                                                               if (document.getElementById('modalCrearOCAutomatica')) {
-                                                                   modalOC = new bootstrap.Modal(document.getElementById('modalCrearOCAutomatica'));
+                                                               const modalOCEl = document.getElementById('modalCrearOCAutomatica');
+                                                               if (modalOCEl) {
+                                                                   modalOC = new bootstrap.Modal(modalOCEl);
+
+                                                                   modalOCEl.addEventListener('show.bs.modal', function () {
+                                                                       const inputCantidadOC = document.getElementById('inputCantidadOC');
+                                                                       let sugerido;
+
+                                                                       if (ultimaCantidadPedida !== null) {
+                                                                           // Ya hubo una OC previa para este artículo: repetimos esa cantidad
+                                                                           sugerido = ultimaCantidadPedida;
+                                                                       } else {
+                                                                           // Nunca se pidió antes: fallback al cálculo por stock
+                                                                           const stockActual = parseInt(formArt.querySelector('input[name="stock"]').value) || 0;
+                                                                           const stockLimite = parseInt(formArt.querySelector('input[name="stockLimite"]').value) || 0;
+                                                                           sugerido = Math.max((stockLimite * 2) - stockActual, stockLimite, 1);
+                                                                       }
+
+                                                                       inputCantidadOC.value = sugerido;
+                                                                       inputCantidadOC.classList.remove('is-invalid');
+                                                                   });
                                                                }
 
                                                                if (radioSi && radioNo) {
@@ -381,7 +411,15 @@
 
                                                                if (btnConfirmarOC) {
                                                                    btnConfirmarOC.addEventListener('click', function () {
+                                                                       const inputCantidadOC = document.getElementById('inputCantidadOC');
+                                                                       const cantidadOC = parseInt(inputCantidadOC.value, 10);
+                                                                       if (!cantidadOC || cantidadOC <= 0) {
+                                                                           inputCantidadOC.classList.add('is-invalid');
+                                                                           return;
+                                                                       }
+
                                                                        document.getElementById('flagGenerarOC').value = "true";
+                                                                       document.getElementById('valCantidadOC').value = cantidadOC;
                                                                        const selectProvArticulo = formArt.querySelector('select[name="idProveedor"]');
                                                                        document.getElementById('valProveedorOC').value = radioSi.checked ? document.getElementById('selectNuevoProveedor').value : selectProvArticulo.value;
                                                                        formArt.dataset.ocConfirmada = 'true';

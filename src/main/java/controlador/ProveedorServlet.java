@@ -15,7 +15,9 @@ public class ProveedorServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        if (!verificarSesion(request, response)) return;
+        if (!verificarSesion(request, response)) {
+            return;
+        }
 
         String accion = request.getParameter("accion");
         ProveedorDAO dao = new ProveedorDAO();
@@ -55,7 +57,9 @@ public class ProveedorServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        if (!verificarSesion(request, response)) return;
+        if (!verificarSesion(request, response)) {
+            return;
+        }
 
         request.setCharacterEncoding("UTF-8");
 
@@ -85,8 +89,8 @@ public class ProveedorServlet extends HttpServlet {
 
         try {
 
-            if (accion != null &&
-                    (accion.equals("guardar") || accion.equals("actualizar"))) {
+            if (accion != null
+                    && (accion.equals("guardar") || accion.equals("actualizar"))) {
 
                 String ruc = request.getParameter("ruc");
                 String correo = request.getParameter("correoProveedor");
@@ -153,14 +157,14 @@ public class ProveedorServlet extends HttpServlet {
 
             p.setContacto(
                     request.getParameter("contacto") != null
-                            ? request.getParameter("contacto").trim()
-                            : null
+                    ? request.getParameter("contacto").trim()
+                    : null
             );
 
             p.setCorreoProveedor(
                     request.getParameter("correoProveedor") != null
-                            ? request.getParameter("correoProveedor").trim()
-                            : null
+                    ? request.getParameter("correoProveedor").trim()
+                    : null
             );
 
             p.setEstado(true);
@@ -193,10 +197,10 @@ public class ProveedorServlet extends HttpServlet {
     // MANEJO DE ERRORES
     // ==============================
     private void enviarErrorYRetornar(HttpServletRequest request,
-                                       HttpServletResponse response,
-                                       ProveedorDAO dao,
-                                       String accion,
-                                       String mensajeError)
+            HttpServletResponse response,
+            ProveedorDAO dao,
+            String accion,
+            String mensajeError)
             throws ServletException, IOException {
 
         request.setAttribute("error", mensajeError);

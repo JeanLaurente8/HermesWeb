@@ -12,7 +12,9 @@ public class SolicitudServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        if (!verificarSesion(request, response)) return;
+        if (!verificarSesion(request, response)) {
+            return;
+        }
 
         String accion = request.getParameter("accion");
         SolicitudDAO dao = new SolicitudDAO();
@@ -51,7 +53,9 @@ public class SolicitudServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        if (!verificarSesion(request, response)) return;
+        if (!verificarSesion(request, response)) {
+            return;
+        }
 
         request.setCharacterEncoding("UTF-8");
         String accion = request.getParameter("accion");
@@ -92,8 +96,8 @@ public class SolicitudServlet extends HttpServlet {
                 }
 
                 // Leer arrays de artículos y cantidades (maestro-detalle)
-                String[] idArticulos  = request.getParameterValues("idArticulo[]");
-                String[] cantidades   = request.getParameterValues("cantidad[]");
+                String[] idArticulos = request.getParameterValues("idArticulo[]");
+                String[] cantidades = request.getParameterValues("cantidad[]");
 
                 if (idArticulos == null || idArticulos.length == 0) {
                     request.setAttribute("error", "Debe agregar al menos un artículo a la solicitud.");
@@ -108,13 +112,20 @@ public class SolicitudServlet extends HttpServlet {
                 // Crear una solicitud por cada línea del detalle
                 for (int i = 0; i < idArticulos.length; i++) {
                     String idArt = idArticulos[i];
-                    String cant  = (cantidades != null && i < cantidades.length) ? cantidades[i] : "1";
+                    String cant = (cantidades != null && i < cantidades.length) ? cantidades[i] : "1";
 
-                    if (idArt == null || idArt.trim().isEmpty()) continue;
+                    if (idArt == null || idArt.trim().isEmpty()) {
+                        continue;
+                    }
 
                     int cantidad = 1;
-                    try { cantidad = Integer.parseInt(cant); } catch (NumberFormatException ex) {}
-                    if (cantidad < 1) cantidad = 1;
+                    try {
+                        cantidad = Integer.parseInt(cant);
+                    } catch (NumberFormatException ex) {
+                    }
+                    if (cantidad < 1) {
+                        cantidad = 1;
+                    }
 
                     Solicitud s = new Solicitud();
                     s.setDescripcion(descripcion.trim());
@@ -137,7 +148,7 @@ public class SolicitudServlet extends HttpServlet {
 
     // Carga el listado según el rol del empleado
     private void cargarListado(HttpServletRequest request, SolicitudDAO dao,
-                                ArticuloDAO artDAO, Empleado sesion) {
+            ArticuloDAO artDAO, Empleado sesion) {
         if (esEmpleado(sesion)) {
             request.setAttribute("solicitudes", dao.listarPorEmpleado(sesion.getIdEmpleado()));
         } else {
@@ -147,14 +158,19 @@ public class SolicitudServlet extends HttpServlet {
     }
 
     private boolean esEmpleado(Empleado sesion) {
-        if (sesion == null) return false;
+        if (sesion == null) {
+            return false;
+        }
         String cargo = sesion.getCargo() != null ? sesion.getCargo() : "";
         return cargo.equalsIgnoreCase("Empleado");
     }
 
     private boolean verificarSesion(HttpServletRequest req, HttpServletResponse res) throws IOException {
         HttpSession s = req.getSession(false);
-        if (s == null || s.getAttribute("empleado") == null) { res.sendRedirect("LoginServlet"); return false; }
+        if (s == null || s.getAttribute("empleado") == null) {
+            res.sendRedirect("LoginServlet");
+            return false;
+        }
         return true;
     }
 }

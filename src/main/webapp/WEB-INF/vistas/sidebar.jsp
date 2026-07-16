@@ -18,6 +18,7 @@
         <ul class="nav flex-column">
             <li><a href="${pageContext.request.contextPath}/MenuServlet" class="nav-link"><i class="fas fa-home me-2"></i>Inicio</a></li>
 
+            <%-- SECCIÓN INVENTARIO --%>
             <% if (AuthUtils.puedeVerModulo(usuarioActual, "Articulos") || AuthUtils.puedeVerModulo(usuarioActual, "Areas")) { %>
             <div class="nav-section">Inventario</div>
                 <% if (AuthUtils.puedeVerModulo(usuarioActual, "Articulos")) { %>
@@ -26,9 +27,16 @@
                 <% if (AuthUtils.puedeVerModulo(usuarioActual, "Areas")) { %>
             <li><a href="${pageContext.request.contextPath}/AreaTrabajoServlet?accion=listar" class="nav-link"><i class="fas fa-building me-2"></i>Areas</a></li>
                 <% } %>
+                <% if (AuthUtils.puedeVerModulo(usuarioActual, "Devolucion")) { %>
+            <li><a href="${pageContext.request.contextPath}/DevolucionServlet?accion=listar" class="nav-link"><i class="fas fa-building me-2"></i>Devolucion</a></li>
+                <% } %>
             <% } %>
 
-            <% if (AuthUtils.puedeVerModulo(usuarioActual, "Solicitudes") || AuthUtils.puedeVerModulo(usuarioActual, "OrdenesCompra") || AuthUtils.puedeVerModulo(usuarioActual, "Conformidad")) { %>
+            <%-- SECCIÓN COMPRAS (ACTUALIZADA) --%>
+            <% if (AuthUtils.puedeVerModulo(usuarioActual, "Solicitudes") 
+                    || AuthUtils.puedeVerModulo(usuarioActual, "OrdenesCompra") 
+                    || AuthUtils.puedeVerModulo(usuarioActual, "Conformidad")
+                    || AuthUtils.puedeVerModulo(usuarioActual, "Abastecimiento")) { %>
             <div class="nav-section">Compras</div>
                 <% if (AuthUtils.puedeVerModulo(usuarioActual, "Solicitudes")) { %>
             <li><a href="${pageContext.request.contextPath}/SolicitudServlet?accion=listar" class="nav-link"><i class="fas fa-clipboard-list me-2"></i>Solicitudes</a></li>
@@ -39,8 +47,12 @@
                 <% if (AuthUtils.puedeVerModulo(usuarioActual, "Conformidad")) { %>
             <li><a href="${pageContext.request.contextPath}/ConformidadServlet?accion=listar" class="nav-link"><i class="fas fa-check-circle me-2"></i>Conformidad</a></li>
                 <% } %>
+                <% if (AuthUtils.puedeVerModulo(usuarioActual, "Abastecimiento")) { %>
+            <li><a href="${pageContext.request.contextPath}/AbastecimientoServlet?accion=listar" class="nav-link"><i class="fas fa-boxes me-2"></i>Abastecimiento</a></li>
+                <% } %>
             <% } %>
 
+            <%-- SECCIÓN ADMINISTRACIÓN --%>
             <% if (AuthUtils.puedeVerModulo(usuarioActual, "Empleados") || AuthUtils.puedeVerModulo(usuarioActual, "Proveedores")) { %>
             <div class="nav-section">Administracion</div>
                 <% if (AuthUtils.puedeVerModulo(usuarioActual, "Empleados")) { %>

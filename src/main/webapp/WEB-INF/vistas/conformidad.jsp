@@ -47,11 +47,11 @@
             .estado-checkbox input:checked + label {
                 color: #198754;
                 font-weight: bold;
-            } 
+            }
             .estado-checkbox input:not(:checked) + label {
                 color: #dc3545;
                 font-weight: bold;
-            } 
+            }
         </style>
     </head><body>
         <%
@@ -61,16 +61,16 @@
             List<Empleado> empleados = (List<Empleado>) request.getAttribute("empleados");
             Conformidad conformidadEditar = (Conformidad) request.getAttribute("conformidadEditar");
             String errorBackend = (String) request.getAttribute("error");
-            
+
             // Validaciones con el string exacto de AuthUtils ("Asistente Almacén")
             boolean esEmpleadoSesion = sesion != null && sesion.getCargo() != null && sesion.getCargo().equalsIgnoreCase("Empleado");
-            boolean esAsistenteAlmacen = sesion != null && sesion.getCargo() != null && 
-                                        (sesion.getCargo().equalsIgnoreCase("Asistente Almacén") || sesion.getCargo().equalsIgnoreCase("Asistente Almacen"));
-            
+            boolean esAsistenteAlmacen = sesion != null && sesion.getCargo() != null
+                    && (sesion.getCargo().equalsIgnoreCase("Asistente Almacén") || sesion.getCargo().equalsIgnoreCase("Asistente Almacen"));
+
             // El Asistente de Almacén no puede ver los botones ni el formulario
             boolean puedeModificar = !esAsistenteAlmacen;
         %>
-        
+
         <div class="container-fluid p-0"><div class="row g-0">
 
                 <jsp:include page="/WEB-INF/vistas/sidebar.jsp" />
@@ -90,7 +90,7 @@
                         </div>
                         <% }%>
 
-                        <% if (puedeModificar) { %>
+                        <% if (puedeModificar) {%>
                         <div class="card card-modern mb-4">
                             <div class="card-header bg-white py-3">
                                 <h5 class="mb-0"><i class="fas fa-<%= conformidadEditar != null ? "edit" : "plus-circle"%> me-2 text-primary"></i>
@@ -136,18 +136,9 @@
                                     </div>
 
                                     <div class="col-md-4">
-                                        <label class="form-label fw-semibold">Empleado</label>
-                                        <select name="idEmpleado" class="form-select" required>
-                                            <option value="">Seleccionar empleado</option>
-                                            <% if (empleados != null) {
-                                                    for (Empleado e : empleados) {
-                                                        boolean sel = conformidadEditar != null && conformidadEditar.getEmpleado() != null
-                                                                && conformidadEditar.getEmpleado().getIdEmpleado() == e.getIdEmpleado();%>
-                                            <option value="<%= e.getIdEmpleado()%>" <%= sel ? "selected" : ""%>><%= e.getNombreCompleto()%></option>
-                                            <% }
-                                                }%>
-                                        </select>
-                                        <div class="invalid-feedback">Por favor, seleccione el empleado.</div>
+                                        <label class="form-label fw-semibold text-muted">Empleado</label>
+                                        <input type="text" class="form-control bg-light" readonly tabindex="-1"
+                                               value="<%= sesion != null ? sesion.getNombreCompleto() : ""%>">
                                     </div>
 
                                     <div class="col-md-8 d-flex align-items-center">
@@ -179,7 +170,7 @@
                                 </form>
                             </div>
                         </div>
-                        <% } %>
+                        <% }%>
 
                         <div class="card card-modern">
                             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
@@ -198,9 +189,9 @@
                                                 <th>Fecha</th>
                                                 <th class="text-center">Estado</th>
                                                 <th>Comentarios</th>
-                                                <% if (puedeModificar) { %>
+                                                    <% if (puedeModificar) { %>
                                                 <th class="text-center">Acciones</th>
-                                                <% } %>
+                                                    <% } %>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -231,23 +222,23 @@
                                                     <% }%>
                                                 </td>
                                                 <td><small class="text-truncate d-inline-block" style="max-width: 150px;" title="<%= c.getComentarios() != null ? c.getComentarios() : ""%>"><%= c.getComentarios() != null ? c.getComentarios() : ""%></small></td>
-                                                
+
                                                 <% if (puedeModificar) { %>
                                                 <td class="text-center">
-                                                    <% if (!esEmpleadoSesion) { %>
+                                                    <% if (!esEmpleadoSesion) {%>
                                                     <a href="${pageContext.request.contextPath}/ConformidadServlet?accion=editar&id=<%= c.getIdConformidad()%>"
                                                        class="btn btn-sm btn-outline-primary me-1"><i class="fas fa-edit"></i></a>
                                                     <a href="${pageContext.request.contextPath}/ConformidadServlet?accion=eliminar&id=<%= c.getIdConformidad()%>"
                                                        class="btn btn-sm btn-outline-danger"
                                                        onclick="return confirm('¿Eliminar conformidad #<%= c.getIdConformidad()%>?')"><i class="fas fa-trash"></i></a>
-                                                    <% } %>
+                                                        <% } %>
                                                 </td>
                                                 <% } %>
                                             </tr>
                                             <% }
-                                            } else { %>
+                                            } else {%>
                                             <tr>
-                                                <td colspan="<%= puedeModificar ? 8 : 7 %>" class="text-center py-5 text-muted">
+                                                <td colspan="<%= puedeModificar ? 8 : 7%>" class="text-center py-5 text-muted">
                                                     <i class="fas fa-check-circle fa-3x mb-3 d-block"></i>No hay conformidades registradas
                                                 </td>
                                             </tr>
@@ -262,51 +253,51 @@
             </div></div>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
         <script>
-            // Validación Frontend con Bootstrap
-            (() => {
-                'use strict'
-                const forms = document.querySelectorAll('.needs-validation')
-                Array.from(forms).forEach(form => {
-                    form.addEventListener('submit', event => {
-                        if (!form.checkValidity()) {
-                            event.preventDefault()
-                            event.stopPropagation()
-                        }
-                        form.classList.add('was-validated')
-                    }, false)
-                })
-            })();
+                                                           // Validación Frontend con Bootstrap
+                                                           (() => {
+                                                               'use strict'
+                                                               const forms = document.querySelectorAll('.needs-validation')
+                                                               Array.from(forms).forEach(form => {
+                                                                   form.addEventListener('submit', event => {
+                                                                       if (!form.checkValidity()) {
+                                                                           event.preventDefault()
+                                                                           event.stopPropagation()
+                                                                       }
+                                                                       form.classList.add('was-validated')
+                                                                   }, false)
+                                                               })
+                                                           })();
 
-            // SCRIPT PARA AUTOCOMPLETAR ARTÍCULO Y CANTIDAD
-            document.addEventListener("DOMContentLoaded", function () {
-                const selectSolicitud = document.getElementById('selectSolicitud');
-                const displayArticulo = document.getElementById('displayArticulo');
-                const displayCantidad = document.getElementById('displayCantidad');
+                                                           // SCRIPT PARA AUTOCOMPLETAR ARTÍCULO Y CANTIDAD
+                                                           document.addEventListener("DOMContentLoaded", function () {
+                                                               const selectSolicitud = document.getElementById('selectSolicitud');
+                                                               const displayArticulo = document.getElementById('displayArticulo');
+                                                               const displayCantidad = document.getElementById('displayCantidad');
 
-                if (selectSolicitud) {
-                    selectSolicitud.addEventListener('change', function () {
-                        const selectedOption = this.options[this.selectedIndex];
-                        const articulo = selectedOption.getAttribute('data-articulo');
-                        const cantidad = selectedOption.getAttribute('data-cantidad');
+                                                               if (selectSolicitud) {
+                                                                   selectSolicitud.addEventListener('change', function () {
+                                                                       const selectedOption = this.options[this.selectedIndex];
+                                                                       const articulo = selectedOption.getAttribute('data-articulo');
+                                                                       const cantidad = selectedOption.getAttribute('data-cantidad');
 
-                        displayArticulo.value = articulo ? articulo : "";
-                        displayCantidad.value = cantidad ? cantidad : "";
-                    });
-                }
+                                                                       displayArticulo.value = articulo ? articulo : "";
+                                                                       displayCantidad.value = cantidad ? cantidad : "";
+                                                                   });
+                                                               }
 
-                // SCRIPT PARA EL CHECKBOX
-                const checkboxFirma = document.getElementById('firma');
-                const labelFirma = document.getElementById('labelFirma');
+                                                               // SCRIPT PARA EL CHECKBOX
+                                                               const checkboxFirma = document.getElementById('firma');
+                                                               const labelFirma = document.getElementById('labelFirma');
 
-                if (checkboxFirma && labelFirma) {
-                    checkboxFirma.addEventListener('change', function () {
-                        if (this.checked) {
-                            labelFirma.textContent = 'Conforme';
-                        } else {
-                            labelFirma.textContent = 'Rechazado';
-                        }
-                    });
-                }
-            });
+                                                               if (checkboxFirma && labelFirma) {
+                                                                   checkboxFirma.addEventListener('change', function () {
+                                                                       if (this.checked) {
+                                                                           labelFirma.textContent = 'Conforme';
+                                                                       } else {
+                                                                           labelFirma.textContent = 'Rechazado';
+                                                                       }
+                                                                   });
+                                                               }
+                                                           });
         </script>
     </body></html>

@@ -1,5 +1,6 @@
 package modelo;
 
+import java.math.BigDecimal;
 import javax.persistence.*;
 
 @Entity
@@ -24,7 +25,7 @@ public class Articulo {
     private int stockLimite;
 
     @Column(name = "precio")
-    private double precio;
+    private BigDecimal precio;
 
     @ManyToOne
     @JoinColumn(name = "id_proveedor")
@@ -48,8 +49,8 @@ public class Articulo {
     public void setStock(int v)                 { this.stock = v; }
     public int getStockLimite()                 { return stockLimite; }
     public void setStockLimite(int v)           { this.stockLimite = v; }
-    public double getPrecio()                   { return precio; }
-    public void setPrecio(double v)             { this.precio = v; }
+    public BigDecimal getPrecio()               { return precio; }
+    public void setPrecio(BigDecimal v)         { this.precio = v; }
     public Proveedor getProveedor()             { return proveedor; }
     public void setProveedor(Proveedor v)       { this.proveedor = v; }
     public boolean isRequiereCompra()           { return requiereCompra; }
