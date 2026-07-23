@@ -1,7 +1,7 @@
 package modelo;
 
 import java.util.Date;
-import javax.persistence.*;
+import jakarta.persistence.*;
 
 @Entity
 @Table(name = "abastecimiento")
@@ -20,7 +20,6 @@ public class Abastecimiento {
     @JoinColumn(name = "id_empleado")
     private Empleado empleado;
 
-    // insertable = false, updatable = false permite que la Base de Datos ponga el CURRENT_TIMESTAMP
     @Column(name = "fecha_recepcion", insertable = false, updatable = false)
     @Temporal(TemporalType.TIMESTAMP)
     private Date fechaRecepcion;

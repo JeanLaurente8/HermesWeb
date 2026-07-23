@@ -1,11 +1,11 @@
 package modelo;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 
 public class Conexion {
 
     private static Conexion instancia;
-    private EntityManagerFactory emf;
+    private final EntityManagerFactory emf;
 
     private Conexion() {
         emf = Persistence.createEntityManagerFactory("HermesPU");

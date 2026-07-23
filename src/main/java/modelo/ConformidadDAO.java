@@ -1,10 +1,10 @@
 package modelo;
  
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.util.List;
  
 public class ConformidadDAO {
-    private EntityManager em;
+    private final EntityManager em;
  
     public ConformidadDAO() {
         em = Conexion.getInstance().createEntityManager();

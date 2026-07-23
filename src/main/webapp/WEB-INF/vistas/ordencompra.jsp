@@ -53,6 +53,26 @@
                 font-weight: 600;
                 vertical-align: middle;
             }
+            .resumen-oc {
+                background: #f8fafc;
+                border: 1px solid #e2e8f0;
+                border-radius: 10px;
+                padding: 14px 18px;
+            }
+            .resumen-oc .fila {
+                display: flex;
+                justify-content: space-between;
+                padding: 3px 0;
+                font-size: 14px;
+            }
+            .resumen-oc .fila.total {
+                border-top: 1px solid #cbd5e1;
+                margin-top: 6px;
+                padding-top: 8px;
+                font-weight: 700;
+                font-size: 16px;
+                color: #1a3a5c;
+            }
         </style>
     </head><body>
         <%
@@ -64,7 +84,6 @@
             Ordencompra ordenEditar = (Ordencompra) request.getAttribute("ordenEditar");
             List<DetalleOc> detallesEditar = ordenEditar != null ? ordenEditar.getDetalles() : null;
             String errorBackend = (String) request.getAttribute("error");
-            String[] estadosOC = {"En Revisión", "Autorizada", "Enviada", "Rechazada"};
 
             boolean esAdmin = sesion != null && ("Gerente Compras".equals(sesion.getCargo())
                     || "Administrador".equals(sesion.getCargo())
@@ -90,69 +109,60 @@
                         </div>
                         <% }%>
 
+                        <% if (ordenEditar != null) { %>
                         <div class="card card-modern mb-4">
-                            <div class="card-header bg-white py-3">
+                            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                                 <h5 class="mb-0">
-                                    <i class="fas fa-<%= ordenEditar != null ? "edit" : "plus-circle"%> me-2 text-primary"></i>
-                                    <%= ordenEditar != null ? "Editar Orden de Compra" : "Nueva Orden de Compra"%>
+                                    <i class="fas fa-edit me-2 text-primary"></i>
+                                    Editar Orden de Compra OC-<%= ordenEditar.getIdOrden()%>
                                 </h5>
+                                <span class="badge bg-secondary"><%= ordenEditar.getEstadoOc()%></span>
                             </div>
                             <div class="card-body">
                                 <form action="${pageContext.request.contextPath}/OrdenCompraServlet" method="post" class="row g-3 needs-validation" novalidate>
-                                    <input type="hidden" name="accion" value="<%= ordenEditar != null ? "actualizar" : "guardar"%>"/>
-                                    <% if (ordenEditar != null) {%>
+                                    <input type="hidden" name="accion" value="actualizar"/>
                                     <input type="hidden" name="idOrden" value="<%= ordenEditar.getIdOrden()%>"/>
-                                    <% }%>
 
                                     <div class="col-md-4">
                                         <label class="form-label fw-semibold">
                                             Artículo en Alerta
-                                            <span class="badge-auto ms-1">Generación automática</span>
+                                            <span class="badge-auto ms-1">Bloqueado</span>
                                         </label>
-                                        <input type="text" name="descripcion" class="form-control"
-                                               value="<%= ordenEditar != null && ordenEditar.getDescripcion() != null ? ordenEditar.getDescripcion() : ""%>"
-                                               placeholder="Artículo que disparó la alerta" maxlength="255">
-                                        <div class="form-text text-muted">Se completa automáticamente al detectar stock bajo.</div>
+                                        <input type="text" class="form-control" disabled
+                                               value="<%= ordenEditar.getDescripcion() != null && !ordenEditar.getDescripcion().isEmpty() ? ordenEditar.getDescripcion() : "Manual"%>">
+                                        <input type="hidden" name="descripcion" value="<%= ordenEditar.getDescripcion() != null ? ordenEditar.getDescripcion() : ""%>">
+                                        <div class="form-text text-muted">Este campo se genera automáticamente y no puede modificarse.</div>
                                     </div>
 
-                                    <div class="col-md-3">
-                                        <label class="form-label fw-semibold">Proveedor</label>
-                                        <select name="idProveedor" class="form-select" required>
-                                            <option value="">— Seleccionar —</option>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-semibold">Proveedor de Referencia</label>
+                                        <select name="idProveedor" class="form-select">
+                                            <option value="">— Sin proveedor general —</option>
                                             <% if (proveedores != null) {
                                                     for (Proveedor p : proveedores) {
-                                                        boolean sel = ordenEditar != null && ordenEditar.getProveedor() != null
+                                                        boolean sel = ordenEditar.getProveedor() != null
                                                                 && ordenEditar.getProveedor().getIdProveedor() == p.getIdProveedor();%>
                                             <option value="<%= p.getIdProveedor()%>" <%= sel ? "selected" : ""%>><%= p.getRazonSocial()%></option>
                                             <% }
                                                 } %>
                                         </select>
-                                        <div class="invalid-feedback">Por favor, asigne un proveedor a la orden.</div>
+                                        <div class="form-text text-muted">Opcional: ahora cada artículo tiene su propio proveedor abajo.</div>
                                     </div>
 
-                                    <div class="col-md-2">
+                                    <div class="col-md-4">
                                         <label class="form-label fw-semibold">Estado OC</label>
-                                        <% if (ordenEditar == null) { %>
-                                        <input type="text" class="form-control" value="En Revisión" disabled>
-                                        <input type="hidden" name="estadoOc" value="En Revisión">
-                                        <% } else { %>
-                                        <select name="estadoOc" class="form-select" required>
-                                            <% for (String est : estadosOC) {
-                                                    boolean sel = est.equals(ordenEditar.getEstadoOc());%>
-                                            <option value="<%= est%>" <%= sel ? "selected" : ""%>><%= est%></option>
-                                            <% }%>
-                                        </select>
-                                        <% } %>
+                                        <input type="text" class="form-control" value="<%= ordenEditar.getEstadoOc()%>" disabled>
+                                        <div class="form-text text-muted">Usa los botones Aprobar/Rechazar del listado para cambiar el estado.</div>
                                     </div>
 
-                                    <div class="col-md-3">
+                                    <div class="col-md-6">
                                         <label class="form-label fw-semibold">Analista de Compras</label>
                                         <select class="form-select" disabled>
                                             <%
                                                 int analistaFijo = 0;
                                                 if (empleados != null) {
                                                     for (Empleado e : empleados) {
-                                                        boolean sel = ordenEditar != null && ordenEditar.getAnalista() != null
+                                                        boolean sel = ordenEditar.getAnalista() != null
                                                                 ? ordenEditar.getAnalista().getIdEmpleado() == e.getIdEmpleado()
                                                                 : (e.getCargo() != null && e.getCargo().toLowerCase().contains("analista") || analistaFijo == 0);
 
@@ -166,14 +176,14 @@
                                         <input type="hidden" name="idAnalista" value="<%= analistaFijo%>">
                                     </div>
 
-                                    <div class="col-md-3">
+                                    <div class="col-md-6">
                                         <label class="form-label fw-semibold">Gerente de Compras</label>
                                         <select class="form-select" disabled>
                                             <%
                                                 int gerenteFijo = 0;
                                                 if (empleados != null) {
                                                     for (Empleado e : empleados) {
-                                                        boolean sel = ordenEditar != null && ordenEditar.getGerente() != null
+                                                        boolean sel = ordenEditar.getGerente() != null
                                                                 ? ordenEditar.getGerente().getIdEmpleado() == e.getIdEmpleado()
                                                                 : (e.getCargo() != null && e.getCargo().contains("Gerente") || gerenteFijo == 0);
                                                         if (sel)
@@ -194,14 +204,23 @@
                                                 <tr>
                                                     <th>Artículo</th>
                                                     <th style="width:140px">Cantidad</th>
+                                                    <th style="width:220px">Proveedor</th>
                                                     <th style="width:48px"></th>
                                                 </tr>
                                             </thead>
                                             <tbody id="cuerpoDetalle">
                                                 <% if (detallesEditar != null && !detallesEditar.isEmpty()) {
-                                                        for (DetalleOc d : detallesEditar) { %>
+                                                        int idx = 0;
+                                                        for (DetalleOc d : detallesEditar) {
+                                                            boolean esPrimerArticulo = (idx == 0); %>
                                                 <tr>
                                                     <td>
+                                                        <% if (esPrimerArticulo) { %>
+                                                        <select class="form-select form-select-sm" disabled>
+                                                            <option><%= d.getArticulo() != null ? d.getArticulo().getNombre() : "—"%></option>
+                                                        </select>
+                                                        <input type="hidden" name="idArticulo[]" value="<%= d.getArticulo() != null ? d.getArticulo().getIdArticulo() : ""%>">
+                                                        <% } else { %>
                                                         <select name="idArticulo[]" class="form-select form-select-sm" required>
                                                             <option value="">— Seleccionar —</option>
                                                             <% if (articulosDisponibles != null) {
@@ -211,27 +230,31 @@
                                                             <% }
                                                                 }%>
                                                         </select>
+                                                        <% } %>
                                                     </td>
                                                     <td><input type="number" name="cantidad[]" class="form-control form-control-sm" min="1" value="<%= d.getCantidad()%>" required></td>
-                                                    <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarFilaDetalle(this)"><i class="fas fa-times"></i></button></td>
-                                                </tr>
-                                                <% }
-                                                } else { %>
-                                                <tr>
                                                     <td>
-                                                        <select name="idArticulo[]" class="form-select form-select-sm" required>
+                                                        <select name="idProveedorLinea[]" class="form-select form-select-sm" required>
                                                             <option value="">— Seleccionar —</option>
-                                                            <% if (articulosDisponibles != null) {
-                                                                    for (Articulo art : articulosDisponibles) {%>
-                                                            <option value="<%= art.getIdArticulo()%>"><%= art.getNombre()%></option>
+                                                            <% if (proveedores != null) {
+                                                                    for (Proveedor p : proveedores) {
+                                                                        boolean selProv = d.getProveedor() != null && d.getProveedor().getIdProveedor() == p.getIdProveedor();%>
+                                                            <option value="<%= p.getIdProveedor()%>" <%= selProv ? "selected" : ""%>><%= p.getRazonSocial()%></option>
                                                             <% }
-                                                                } %>
+                                                                }%>
                                                         </select>
                                                     </td>
-                                                    <td><input type="number" name="cantidad[]" class="form-control form-control-sm" min="1" value="1" required></td>
-                                                    <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarFilaDetalle(this)"><i class="fas fa-times"></i></button></td>
+                                                    <td>
+                                                        <% if (!esPrimerArticulo) { %>
+                                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarFilaDetalle(this)"><i class="fas fa-times"></i></button>
+                                                        <% } else { %>
+                                                        <span class="text-muted small" title="Artículo que disparó la alerta, no se puede quitar"><i class="fas fa-lock"></i></span>
+                                                        <% } %>
+                                                    </td>
                                                 </tr>
-                                                <% }%>
+                                                <% idx++;
+                                                    }
+                                                } %>
                                             </tbody>
                                         </table>
                                         <button type="button" class="btn btn-sm btn-outline-primary" onclick="agregarFilaDetalle()">
@@ -239,19 +262,26 @@
                                         </button>
                                     </div>
 
+                                    <div class="col-md-6">
+                                        <div class="resumen-oc">
+                                            <div class="fila"><span>Subtotal</span><span id="subtotalOC">S/ 0.00</span></div>
+                                            <div class="fila"><span>IGV (18%)</span><span id="igvOC">S/ 0.00</span></div>
+                                            <div class="fila total"><span>Total</span><span id="totalOC">S/ 0.00</span></div>
+                                        </div>
+                                    </div>
+
                                     <div class="col-md-2 d-flex align-items-end mt-4">
                                         <button type="submit" class="btn btn-primary w-100">
-                                            <i class="fas fa-save me-1"></i><%= ordenEditar != null ? "Actualizar" : "Crear OC"%>
+                                            <i class="fas fa-save me-1"></i>Actualizar
                                         </button>
                                     </div>
-                                    <% if (ordenEditar != null) { %>
                                     <div class="col-md-2 d-flex align-items-end mt-4">
                                         <a href="${pageContext.request.contextPath}/OrdenCompraServlet?accion=listar" class="btn btn-secondary w-100">Cancelar</a>
                                     </div>
-                                    <% }%>
                                 </form>
                             </div>
                         </div>
+                        <% } %>
 
                         <div class="card card-modern">
                             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
@@ -266,8 +296,8 @@
                                                 <th class="px-4">#</th>
                                                 <th>Fecha</th>
                                                 <th>Artículo en Alerta</th>
-                                                <th>Detalle (Artículo x Cant.)</th>
-                                                <th>Proveedor</th>
+                                                <th>Detalle (Artículo x Cant. x Proveedor)</th>
+                                                <th>Proveedor Ref.</th>
                                                 <th>Analista</th>
                                                 <th>Gerente</th>
                                                 <th class="text-center">Estado</th>
@@ -279,7 +309,7 @@
                                                     for (Ordencompra o : ordenes) {
                                                         String badgeClass;
                                                         switch (o.getEstadoOc() != null ? o.getEstadoOc() : "") {
-                                                            case "Autorizada":
+                                                            case "Aprobada":
                                                                 badgeClass = "bg-success";
                                                                 break;
                                                             case "Rechazada":
@@ -295,6 +325,7 @@
                                                                 badgeClass = "bg-secondary";
                                                         }
                                                         boolean esAutomatica = o.getDescripcion() != null && !o.getDescripcion().isEmpty();
+                                                        boolean puedeAprobarRechazar = "En Revisión".equals(o.getEstadoOc());
                                             %>
                                             <tr>
                                                 <td class="px-4 fw-semibold text-primary">OC-<%= o.getIdOrden()%></td>
@@ -319,6 +350,9 @@
                                                     <span class="badge bg-light text-dark border d-block mb-1 text-start">
                                                         <%= d.getArticulo() != null ? d.getArticulo().getNombre() : "Artículo eliminado"%>
                                                         <strong class="text-primary">x<%= d.getCantidad()%></strong>
+                                                        <% if (d.getProveedor() != null) { %>
+                                                        <span class="text-muted">· <%= d.getProveedor().getRazonSocial()%></span>
+                                                        <% } %>
                                                     </span>
                                                     <% }
                                                     } else { %>
@@ -332,14 +366,25 @@
                                                     <span class="badge <%= badgeClass%>"><%= o.getEstadoOc()%></span>
                                                 </td>
                                                 <td class="text-center">
-                                                    <a href="${pageContext.request.contextPath}/OrdenCompraServlet?accion=imprimir&id=<%= o.getIdOrden()%>"
-                                                       target="_blank"
-                                                       class="btn btn-sm btn-outline-secondary me-1"><i class="fas fa-print"></i></a>
+                                                    <% if (puedeAprobarRechazar) { %>
+                                                    <a href="${pageContext.request.contextPath}/OrdenCompraServlet?accion=aprobar&id=<%= o.getIdOrden()%>"
+                                                       class="btn btn-sm btn-outline-success me-1"
+                                                       onclick="return confirm('¿Aprobar OC-<%= o.getIdOrden()%>?')"><i class="fas fa-check"></i></a>
+                                                    <a href="${pageContext.request.contextPath}/OrdenCompraServlet?accion=rechazar&id=<%= o.getIdOrden()%>"
+                                                       class="btn btn-sm btn-outline-danger me-1"
+                                                       onclick="return confirm('¿Rechazar OC-<%= o.getIdOrden()%>?')"><i class="fas fa-ban"></i></a>
+                                                    <% } %>
+                                                    <% if (puedeAprobarRechazar) { %>
                                                     <a href="${pageContext.request.contextPath}/OrdenCompraServlet?accion=editar&id=<%= o.getIdOrden()%>"
                                                        class="btn btn-sm btn-outline-primary me-1"><i class="fas fa-edit"></i></a>
-                                                    <a href="${pageContext.request.contextPath}/OrdenCompraServlet?accion=eliminar&id=<%= o.getIdOrden()%>"
-                                                       class="btn btn-sm btn-outline-danger"
-                                                       onclick="return confirm('¿Eliminar OC-<%= o.getIdOrden()%>?')"><i class="fas fa-trash"></i></a>
+                                                    <% } else { %>
+                                                    <span class="btn btn-sm btn-outline-secondary disabled me-1" title="Solo se puede editar mientras está 'En Revisión'">
+                                                        <i class="fas fa-lock"></i>
+                                                    </span>
+                                                    <% } %>
+                                                    <a href="${pageContext.request.contextPath}/OrdenCompraServlet?accion=imprimir&id=<%= o.getIdOrden()%>"
+                                                       target="_blank"
+                                                       class="btn btn-sm btn-outline-secondary"><i class="fas fa-print"></i></a>
                                                 </td>
                                             </tr>
                                             <% }
@@ -363,8 +408,20 @@
                     for (Articulo art : articulosDisponibles) {
                         String nombreSeguro = art.getNombre() != null ? art.getNombre() : "";
                         nombreSeguro = nombreSeguro.replace("\\", "\\\\").replace("\"", "\\\"");
+                        java.math.BigDecimal precioArt = art.getPrecio() != null ? art.getPrecio() : java.math.BigDecimal.ZERO;
             %>
-                                                               {id: <%= art.getIdArticulo()%>, nombre: "<%= nombreSeguro%>"},
+                                                               {id: <%= art.getIdArticulo()%>, nombre: "<%= nombreSeguro%>", precio: <%= precioArt%>},
+            <% }
+                }%>
+                                                           ];
+
+                                                           const proveedoresDisponibles = [
+            <% if (proveedores != null) {
+                    for (Proveedor p : proveedores) {
+                        String razonSegura = p.getRazonSocial() != null ? p.getRazonSocial() : "";
+                        razonSegura = razonSegura.replace("\\", "\\\\").replace("\"", "\\\"");
+            %>
+                                                               {id: <%= p.getIdProveedor()%>, nombre: "<%= razonSegura%>"},
             <% }
                 }%>
                                                            ];
@@ -373,6 +430,14 @@
                                                                let html = '<option value="">— Seleccionar —</option>';
                                                                articulosDisponibles.forEach(function (art) {
                                                                    html += '<option value="' + art.id + '">' + art.nombre + '</option>';
+                                                               });
+                                                               return html;
+                                                           }
+
+                                                           function generarOpcionesProveedor() {
+                                                               let html = '<option value="">— Seleccionar —</option>';
+                                                               proveedoresDisponibles.forEach(function (p) {
+                                                                   html += '<option value="' + p.id + '">' + p.nombre + '</option>';
                                                                });
                                                                return html;
                                                            }
@@ -399,6 +464,14 @@
                                                                inputCantidad.required = true;
                                                                tdCantidad.appendChild(inputCantidad);
 
+                                                               const tdProveedor = document.createElement('td');
+                                                               const selectProv = document.createElement('select');
+                                                               selectProv.name = 'idProveedorLinea[]';
+                                                               selectProv.className = 'form-select form-select-sm';
+                                                               selectProv.required = true;
+                                                               selectProv.innerHTML = generarOpcionesProveedor();
+                                                               tdProveedor.appendChild(selectProv);
+
                                                                const tdBoton = document.createElement('td');
                                                                const btn = document.createElement('button');
                                                                btn.type = 'button';
@@ -411,16 +484,55 @@
 
                                                                fila.appendChild(tdArticulo);
                                                                fila.appendChild(tdCantidad);
+                                                               fila.appendChild(tdProveedor);
                                                                fila.appendChild(tdBoton);
                                                                tbody.appendChild(fila);
+                                                               actualizarResumen();
                                                            }
                                                            function eliminarFilaDetalle(btn) {
                                                                const tbody = document.getElementById('cuerpoDetalle');
                                                                if (tbody.rows.length > 1) {
                                                                    btn.closest('tr').remove();
+                                                                   actualizarResumen();
                                                                } else {
                                                                    alert('La orden debe tener al menos un artículo.');
                                                                }
+                                                           }
+
+                                                           function actualizarResumen() {
+                                                               const tbody = document.getElementById('cuerpoDetalle');
+                                                               if (!tbody) {
+                                                                   return;
+                                                               }
+                                                               let subtotal = 0;
+                                                               Array.from(tbody.rows).forEach(function (fila) {
+                                                                   const campoArt = fila.querySelector('[name="idArticulo[]"]');
+                                                                   const inputCant = fila.querySelector('input[name="cantidad[]"]');
+                                                                   if (!campoArt || !inputCant) {
+                                                                       return;
+                                                                   }
+                                                                   const idArt = parseInt(campoArt.value, 10);
+                                                                   const cantidad = parseFloat(inputCant.value) || 0;
+                                                                   const articulo = articulosDisponibles.find(a => a.id === idArt);
+                                                                   if (articulo) {
+                                                                       subtotal += articulo.precio * cantidad;
+                                                                   }
+                                                               });
+                                                               const igv = subtotal * 0.18;
+                                                               const total = subtotal + igv;
+                                                               const elSub = document.getElementById('subtotalOC');
+                                                               const elIgv = document.getElementById('igvOC');
+                                                               const elTotal = document.getElementById('totalOC');
+                                                               if (elSub) elSub.textContent = 'S/ ' + subtotal.toFixed(2);
+                                                               if (elIgv) elIgv.textContent = 'S/ ' + igv.toFixed(2);
+                                                               if (elTotal) elTotal.textContent = 'S/ ' + total.toFixed(2);
+                                                           }
+
+                                                           const cuerpoDetalleEl = document.getElementById('cuerpoDetalle');
+                                                           if (cuerpoDetalleEl) {
+                                                               cuerpoDetalleEl.addEventListener('input', actualizarResumen);
+                                                               cuerpoDetalleEl.addEventListener('change', actualizarResumen);
+                                                               actualizarResumen();
                                                            }
         </script>
         <script>

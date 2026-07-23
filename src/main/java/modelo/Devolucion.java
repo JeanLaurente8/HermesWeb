@@ -1,6 +1,6 @@
 package modelo;
 import java.time.LocalDateTime;
-import javax.persistence.*;
+import jakarta.persistence.*;
 
 @Entity
 @Table(name = "devolucion")
@@ -18,6 +18,9 @@ public class Devolucion {
     @JoinColumn(name = "id_empleado")
     private Empleado empleado; // quien gestiona/registra la devolución
 
+    @Column(name = "estado_devolucion")
+    private String estadoDevolucion = "En revisión";
+    
     @Column(name = "cantidad_devuelta")
     private int cantidadDevuelta;
 
@@ -46,4 +49,6 @@ public class Devolucion {
     public void setMotivo(String v)              { this.motivo = v; }
     public LocalDateTime getFechaDevolucion()    { return fechaDevolucion; }
     public void setFechaDevolucion(LocalDateTime v) { this.fechaDevolucion = v; }
+    public String getEstadoDevolucion() { return estadoDevolucion; }
+    public void setEstadoDevolucion(String estadoDevolucion) { this.estadoDevolucion = estadoDevolucion; }
 }

@@ -2,8 +2,8 @@ package controlador;
 
 import modelo.*;
 import util.AuthUtils;
-import javax.servlet.*;
-import javax.servlet.http.*;
+import jakarta.servlet.*;
+import jakarta.servlet.http.*;
 import java.io.IOException;
 import java.util.List;
 

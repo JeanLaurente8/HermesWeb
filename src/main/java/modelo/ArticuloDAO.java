@@ -1,10 +1,10 @@
 package modelo;
  
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.util.List;
  
 public class ArticuloDAO {
-    private EntityManager em;
+    private final EntityManager em;
  
     public ArticuloDAO() {
         em = Conexion.getInstance().createEntityManager();

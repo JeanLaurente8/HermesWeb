@@ -1,6 +1,6 @@
 package modelo;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 
 @Entity
 @Table(name = "detalle_oc")
@@ -19,6 +19,10 @@ public class DetalleOc {
     private Articulo articulo;
 
     @ManyToOne
+    @JoinColumn(name = "id_proveedor")
+    private Proveedor proveedor;
+
+    @ManyToOne
     @JoinColumn(name = "id_orden")
     private Ordencompra orden;
 
@@ -30,6 +34,8 @@ public class DetalleOc {
     public void setCantidad(int v)         { this.cantidad = v; }
     public Articulo getArticulo()          { return articulo; }
     public void setArticulo(Articulo v)    { this.articulo = v; }
+    public Proveedor getProveedor()        { return proveedor; }
+    public void setProveedor(Proveedor v)  { this.proveedor = v; }
     public Ordencompra getOrden()          { return orden; }
     public void setOrden(Ordencompra v)    { this.orden = v; }
 }

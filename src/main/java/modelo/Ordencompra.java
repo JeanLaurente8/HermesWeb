@@ -3,7 +3,7 @@ package modelo;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import javax.persistence.*;
+import jakarta.persistence.*;
 
 @Entity
 @Table(name = "orden_compra")
@@ -38,9 +38,6 @@ public class Ordencompra {
     @Column(name = "es_automatica")
     private Boolean esAutomatica = false;
 
-    // Detalle de artículos/cantidades de esta OC. Cascade ALL + orphanRemoval
-    // permite que al guardar/actualizar la orden se guarden/eliminen sus líneas
-    // de detalle automáticamente.
     @OneToMany(mappedBy = "orden", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<DetalleOc> detalles = new ArrayList<>();
 
@@ -73,7 +70,6 @@ public class Ordencompra {
     public List<DetalleOc> getDetalles()            { return detalles; }
     public void setDetalles(List<DetalleOc> v)      { this.detalles = v; }
 
-    // Helper para mantener ambos lados de la relación sincronizados
     public void addDetalle(DetalleOc d) {
         d.setOrden(this);
         this.detalles.add(d);

@@ -1,7 +1,7 @@
 package modelo;
 
 import java.time.LocalDateTime;
-import javax.persistence.*;
+import jakarta.persistence.*;
 
 @Entity
 @Table(name = "conformidad")
@@ -19,7 +19,7 @@ public class Conformidad {
     @ManyToOne
     @JoinColumn(name = "id_empleado")
     private Empleado empleado;
-
+    
     @Column(name = "fecha_conformidad")
     private LocalDateTime fechaConformidad;
 

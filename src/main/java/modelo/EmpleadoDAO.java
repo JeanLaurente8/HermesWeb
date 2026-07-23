@@ -1,12 +1,12 @@
 package modelo;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.util.Date;
 import java.util.List;
 
 public class EmpleadoDAO {
 
-    private EntityManager em;
+    private final EntityManager em;
 
     public EmpleadoDAO() {
         em = Conexion.getInstance().createEntityManager();
@@ -22,11 +22,11 @@ public class EmpleadoDAO {
 
     public Empleado login(String username, String password) {
         try {
-            return em.createQuery(
-                    "SELECT e FROM Empleado e WHERE e.username = :u AND e.password = :p AND e.estado = true",
+            return (Empleado) em.createNativeQuery(
+                    "SELECT * FROM empleado WHERE username = ? AND password = SHA2(?, 256) AND estado = 1",
                     Empleado.class)
-                    .setParameter("u", username)
-                    .setParameter("p", password)
+                    .setParameter(1, username)
+                    .setParameter(2, password)
                     .getSingleResult();
         } catch (NoResultException e) {
             return null;

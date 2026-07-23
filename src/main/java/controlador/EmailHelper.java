@@ -2,8 +2,8 @@ package controlador;
 
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
-import javax.mail.*;
-import javax.mail.internet.*;
+import jakarta.mail.*;
+import jakarta.mail.internet.*;
 
 public class EmailHelper {
     

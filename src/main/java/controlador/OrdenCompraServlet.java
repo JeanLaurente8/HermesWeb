@@ -1,8 +1,8 @@
 package controlador;
 
 import modelo.*;
-import javax.servlet.*;
-import javax.servlet.http.*;
+import jakarta.servlet.*;
+import jakarta.servlet.http.*;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,10 +25,10 @@ public class OrdenCompraServlet extends HttpServlet {
 
         try {
             if (accion == null || accion.equals("listar")) {
-                String errorEliminar = (String) request.getSession().getAttribute("errorEliminarOC");
-                if (errorEliminar != null) {
-                    request.getSession().removeAttribute("errorEliminarOC");
-                    request.setAttribute("error", errorEliminar);
+                String mensajeError = (String) request.getSession().getAttribute("mensajeErrorOC");
+                if (mensajeError != null) {
+                    request.getSession().removeAttribute("mensajeErrorOC");
+                    request.setAttribute("error", mensajeError);
                 }
                 request.setAttribute("ordenes", dao.listar());
                 request.setAttribute("empleados", empDAO.listar());
@@ -37,7 +37,22 @@ public class OrdenCompraServlet extends HttpServlet {
                 request.getRequestDispatcher("/WEB-INF/vistas/ordencompra.jsp").forward(request, response);
 
             } else if (accion.equals("editar")) {
-                request.setAttribute("ordenEditar", dao.buscarConDetalle(Integer.parseInt(request.getParameter("id"))));
+                Ordencompra ordenAEditar = dao.buscarConDetalle(Integer.parseInt(request.getParameter("id")));
+
+                if (ordenAEditar == null) {
+                    response.sendRedirect("OrdenCompraServlet?accion=listar");
+                    return;
+                }
+
+                if (!"En Revisión".equals(ordenAEditar.getEstadoOc())) {
+                    request.getSession().setAttribute("mensajeErrorOC",
+                            "La OC-" + ordenAEditar.getIdOrden() + " no se puede editar: solo las órdenes en estado "
+                            + "'En Revisión' son editables (estado actual: '" + ordenAEditar.getEstadoOc() + "').");
+                    response.sendRedirect("OrdenCompraServlet?accion=listar");
+                    return;
+                }
+
+                request.setAttribute("ordenEditar", ordenAEditar);
                 request.setAttribute("ordenes", dao.listar());
                 request.setAttribute("empleados", empDAO.listar());
                 request.setAttribute("proveedores", provDAO.listarActivos());
@@ -45,18 +60,26 @@ public class OrdenCompraServlet extends HttpServlet {
                 request.getRequestDispatcher("/WEB-INF/vistas/ordencompra.jsp").forward(request, response);
 
             } else if (accion.equals("imprimir")) {
-                Ordencompra oc = dao.buscarConDetalle(Integer.parseInt(request.getParameter("id")));
-                if (oc == null) {
+                Ordencompra ocImprimir = dao.buscarConDetalle(Integer.parseInt(request.getParameter("id")));
+                if (ocImprimir == null) {
                     response.sendRedirect("OrdenCompraServlet?accion=listar");
                     return;
                 }
-                request.setAttribute("oc", oc);
+                request.setAttribute("oc", ocImprimir);
                 request.getRequestDispatcher("/WEB-INF/vistas/oc_imprimir.jsp").forward(request, response);
+
+            } else if (accion.equals("aprobar") || accion.equals("rechazar")) {
+                String nuevoEstado = accion.equals("aprobar") ? "Aprobada" : "Rechazada";
+                String errorCambio = dao.cambiarEstado(Integer.parseInt(request.getParameter("id")), nuevoEstado);
+                if (errorCambio != null) {
+                    request.getSession().setAttribute("mensajeErrorOC", errorCambio);
+                }
+                response.sendRedirect("OrdenCompraServlet?accion=listar");
 
             } else if (accion.equals("eliminar")) {
                 String errorEliminar = dao.eliminar(Integer.parseInt(request.getParameter("id")));
                 if (errorEliminar != null) {
-                    request.getSession().setAttribute("errorEliminarOC", errorEliminar);
+                    request.getSession().setAttribute("mensajeErrorOC", errorEliminar);
                 }
                 response.sendRedirect("OrdenCompraServlet?accion=listar");
             }
@@ -84,38 +107,42 @@ public class OrdenCompraServlet extends HttpServlet {
         ArticuloDAO artDAO = new ArticuloDAO();
 
         try {
-            String estadoOc = request.getParameter("estadoOc");
-            String idGerente = request.getParameter("idGerente");
             String idProveedor = request.getParameter("idProveedor");
 
-            // Validaciones de Negocio Estrictas
             if (accion != null && (accion.equals("guardar") || accion.equals("actualizar"))) {
 
-                if (idProveedor == null || idProveedor.trim().isEmpty()) {
-                    enviarErrorYRetornar(request, response, dao, empDAO, provDAO, artDAO, accion, "Error: Es obligatorio seleccionar un Proveedor para la Orden de Compra.");
-                    return;
-                }
-
-                if ("Autorizada".equals(estadoOc) && (idGerente == null || idGerente.trim().isEmpty())) {
-                    enviarErrorYRetornar(request, response, dao, empDAO, provDAO, artDAO, accion, "Error de validación: Para que una Orden de Compra pase a estado 'Autorizada', debe tener un Gerente de Compras asignado.");
-                    return;
-                }
-
-                List<DetalleOc> detalles = construirDetalles(request, artDAO);
+                List<DetalleOc> detalles = construirDetalles(request, artDAO, provDAO);
                 if (detalles.isEmpty()) {
                     enviarErrorYRetornar(request, response, dao, empDAO, provDAO, artDAO, accion, "Error: Debes agregar al menos un artículo con su cantidad a la Orden de Compra.");
+                    return;
+                }
+
+                boolean faltaProveedorEnLinea = detalles.stream().anyMatch(d -> d.getProveedor() == null);
+                if (faltaProveedorEnLinea) {
+                    enviarErrorYRetornar(request, response, dao, empDAO, provDAO, artDAO, accion, "Error: Debes asignar un proveedor a cada artículo del detalle de la Orden de Compra.");
                     return;
                 }
 
                 Ordencompra o;
                 if ("actualizar".equals(accion)) {
                     o = dao.buscarConDetalle(Integer.parseInt(request.getParameter("idOrden")));
+                    if (o == null) {
+                        response.sendRedirect("OrdenCompraServlet?accion=listar");
+                        return;
+                    }
+                    if (!"En Revisión".equals(o.getEstadoOc())) {
+                        request.getSession().setAttribute("mensajeErrorOC",
+                                "La OC-" + o.getIdOrden() + " no se puede editar: solo las órdenes en estado "
+                                + "'En Revisión' son editables (estado actual: '" + o.getEstadoOc() + "').");
+                        response.sendRedirect("OrdenCompraServlet?accion=listar");
+                        return;
+                    }
                 } else {
                     o = new Ordencompra();
+                    o.setEstadoOc("En Revisión");
                 }
 
                 o.setDescripcion(request.getParameter("descripcion"));
-                o.setEstadoOc(estadoOc);
 
                 String idAnalista = request.getParameter("idAnalista");
                 if (idAnalista != null && !idAnalista.isEmpty()) {
@@ -124,6 +151,7 @@ public class OrdenCompraServlet extends HttpServlet {
                     o.setAnalista(null);
                 }
 
+                String idGerente = request.getParameter("idGerente");
                 if (idGerente != null && !idGerente.isEmpty()) {
                     o.setGerente(empDAO.buscar(Integer.parseInt(idGerente)));
                 } else {
@@ -132,6 +160,8 @@ public class OrdenCompraServlet extends HttpServlet {
 
                 if (idProveedor != null && !idProveedor.isEmpty()) {
                     o.setProveedor(provDAO.buscar(Integer.parseInt(idProveedor)));
+                } else {
+                    o.setProveedor(null);
                 }
 
                 o.getDetalles().clear();
@@ -156,10 +186,11 @@ public class OrdenCompraServlet extends HttpServlet {
         }
     }
 
-    private List<DetalleOc> construirDetalles(HttpServletRequest request, ArticuloDAO artDAO) {
+    private List<DetalleOc> construirDetalles(HttpServletRequest request, ArticuloDAO artDAO, ProveedorDAO provDAO) {
         List<DetalleOc> detalles = new ArrayList<>();
         String[] idsArticulo = request.getParameterValues("idArticulo[]");
         String[] cantidades = request.getParameterValues("cantidad[]");
+        String[] idsProveedorLinea = request.getParameterValues("idProveedorLinea[]");
 
         if (idsArticulo == null || cantidades == null) {
             return detalles;
@@ -167,9 +198,7 @@ public class OrdenCompraServlet extends HttpServlet {
 
         for (int i = 0; i < idsArticulo.length; i++) {
             String idArt = idsArticulo[i];
-            if (idArt == null || idArt.trim().isEmpty()) {
-                continue;
-            }
+            if (idArt == null || idArt.trim().isEmpty()) continue;
 
             int cantidad;
             try {
@@ -177,18 +206,21 @@ public class OrdenCompraServlet extends HttpServlet {
             } catch (NumberFormatException e) {
                 continue;
             }
-            if (cantidad <= 0) {
-                continue;
-            }
+            if (cantidad <= 0) continue;
 
             Articulo articulo = artDAO.buscar(Integer.parseInt(idArt));
-            if (articulo == null) {
-                continue;
-            }
+            if (articulo == null) continue;
 
             DetalleOc d = new DetalleOc();
             d.setArticulo(articulo);
             d.setCantidad(cantidad);
+
+            if (idsProveedorLinea != null && i < idsProveedorLinea.length
+                    && idsProveedorLinea[i] != null && !idsProveedorLinea[i].trim().isEmpty()) {
+                Proveedor provLinea = provDAO.buscar(Integer.parseInt(idsProveedorLinea[i]));
+                d.setProveedor(provLinea);
+            }
+
             detalles.add(d);
         }
         return detalles;

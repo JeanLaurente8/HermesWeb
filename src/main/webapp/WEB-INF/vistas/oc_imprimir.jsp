@@ -53,6 +53,7 @@
     <thead class="table-light">
         <tr>
             <th>Artículo</th>
+            <th>Proveedor</th>
             <th class="text-center">Cantidad</th>
             <th class="text-end">Precio Unit.</th>
             <th class="text-end">Subtotal</th>
@@ -69,19 +70,31 @@
         %>
         <tr>
             <td><%= art != null ? art.getNombre() : "Artículo eliminado" %></td>
+            <td><%= d.getProveedor() != null ? d.getProveedor().getRazonSocial() : "—" %></td>
             <td class="text-center"><%= d.getCantidad() %></td>
             <td class="text-end">S/ <%= String.format("%.2f", precioUnit) %></td>
             <td class="text-end">S/ <%= String.format("%.2f", subtotal) %></td>
         </tr>
         <% } } else { %>
-        <tr><td colspan="4" class="text-center text-muted">Sin artículos registrados</td></tr>
+        <tr><td colspan="5" class="text-center text-muted">Sin artículos registrados</td></tr>
         <% } %>
     </tbody>
-    <% if (detalles != null && !detalles.isEmpty()) { %>
+    <% if (detalles != null && !detalles.isEmpty()) {
+           java.math.BigDecimal igv = totalOC.multiply(new java.math.BigDecimal("0.18"));
+           java.math.BigDecimal totalConIgv = totalOC.add(igv);
+    %>
     <tfoot>
         <tr class="table-light">
-            <th colspan="3" class="text-end">TOTAL</th>
+            <th colspan="4" class="text-end">Subtotal</th>
             <th class="text-end">S/ <%= String.format("%.2f", totalOC) %></th>
+        </tr>
+        <tr class="table-light">
+            <th colspan="4" class="text-end">IGV (18%)</th>
+            <th class="text-end">S/ <%= String.format("%.2f", igv) %></th>
+        </tr>
+        <tr class="table-light">
+            <th colspan="4" class="text-end">TOTAL</th>
+            <th class="text-end">S/ <%= String.format("%.2f", totalConIgv) %></th>
         </tr>
     </tfoot>
     <% } %>

@@ -62,13 +62,15 @@
             Conformidad conformidadEditar = (Conformidad) request.getAttribute("conformidadEditar");
             String errorBackend = (String) request.getAttribute("error");
 
-            // Validaciones con el string exacto de AuthUtils ("Asistente Almacén")
             boolean esEmpleadoSesion = sesion != null && sesion.getCargo() != null && sesion.getCargo().equalsIgnoreCase("Empleado");
             boolean esAsistenteAlmacen = sesion != null && sesion.getCargo() != null
                     && (sesion.getCargo().equalsIgnoreCase("Asistente Almacén") || sesion.getCargo().equalsIgnoreCase("Asistente Almacen"));
+            boolean esCoordinadorAlmacen = sesion != null && sesion.getCargo() != null
+                    && (sesion.getCargo().equalsIgnoreCase("Coordinador Almacén") || sesion.getCargo().equalsIgnoreCase("Coordinador Almacen"));
 
-            // El Asistente de Almacén no puede ver los botones ni el formulario
-            boolean puedeModificar = !esAsistenteAlmacen;
+            boolean puedeRegistrar = !esAsistenteAlmacen && !esCoordinadorAlmacen;
+            
+            boolean puedeEditarEliminar = !esEmpleadoSesion && !esAsistenteAlmacen && !esCoordinadorAlmacen;
         %>
 
         <div class="container-fluid p-0"><div class="row g-0">
@@ -90,7 +92,7 @@
                         </div>
                         <% }%>
 
-                        <% if (puedeModificar) {%>
+                        <% if (puedeRegistrar) {%>
                         <div class="card card-modern mb-4">
                             <div class="card-header bg-white py-3">
                                 <h5 class="mb-0"><i class="fas fa-<%= conformidadEditar != null ? "edit" : "plus-circle"%> me-2 text-primary"></i>
@@ -189,7 +191,7 @@
                                                 <th>Fecha</th>
                                                 <th class="text-center">Estado</th>
                                                 <th>Comentarios</th>
-                                                    <% if (puedeModificar) { %>
+                                                    <% if (puedeEditarEliminar) { %>
                                                 <th class="text-center">Acciones</th>
                                                     <% } %>
                                             </tr>
@@ -223,7 +225,7 @@
                                                 </td>
                                                 <td><small class="text-truncate d-inline-block" style="max-width: 150px;" title="<%= c.getComentarios() != null ? c.getComentarios() : ""%>"><%= c.getComentarios() != null ? c.getComentarios() : ""%></small></td>
 
-                                                <% if (puedeModificar) { %>
+                                                <% if (puedeEditarEliminar) { %>
                                                 <td class="text-center">
                                                     <% if (!esEmpleadoSesion) {%>
                                                     <a href="${pageContext.request.contextPath}/ConformidadServlet?accion=editar&id=<%= c.getIdConformidad()%>"
@@ -238,7 +240,7 @@
                                             <% }
                                             } else {%>
                                             <tr>
-                                                <td colspan="<%= puedeModificar ? 8 : 7%>" class="text-center py-5 text-muted">
+                                                <td colspan="<%= puedeEditarEliminar ? 8 : 7%>" class="text-center py-5 text-muted">
                                                     <i class="fas fa-check-circle fa-3x mb-3 d-block"></i>No hay conformidades registradas
                                                 </td>
                                             </tr>
@@ -246,6 +248,17 @@
                                         </tbody>
                                     </table>
                                 </div>
+
+                                <%-- NUEVO: BOTÓN MOSTRAR TODO --%>
+                                <% Boolean mostrarTodo = (Boolean) request.getAttribute("mostrarTodo");
+                                    if (mostrarTodo != null && !mostrarTodo && conformidades != null && !conformidades.isEmpty()) { %>
+                                <div class="card-footer bg-white text-center py-3 border-top">
+                                    <a href="${pageContext.request.contextPath}/ConformidadServlet?accion=listar&filtro=todo" class="btn btn-outline-primary btn-sm px-4">
+                                        <i class="fas fa-chevron-down me-2"></i>Mostrar todos los meses
+                                    </a>
+                                </div>
+                                <% }%>                                        
+
                             </div>
                         </div>
                     </div>
@@ -273,13 +286,11 @@
                                                                const selectSolicitud = document.getElementById('selectSolicitud');
                                                                const displayArticulo = document.getElementById('displayArticulo');
                                                                const displayCantidad = document.getElementById('displayCantidad');
-
                                                                if (selectSolicitud) {
                                                                    selectSolicitud.addEventListener('change', function () {
                                                                        const selectedOption = this.options[this.selectedIndex];
                                                                        const articulo = selectedOption.getAttribute('data-articulo');
                                                                        const cantidad = selectedOption.getAttribute('data-cantidad');
-
                                                                        displayArticulo.value = articulo ? articulo : "";
                                                                        displayCantidad.value = cantidad ? cantidad : "";
                                                                    });
@@ -288,13 +299,20 @@
                                                                // SCRIPT PARA EL CHECKBOX
                                                                const checkboxFirma = document.getElementById('firma');
                                                                const labelFirma = document.getElementById('labelFirma');
+                                                               const textareaComentarios = document.querySelector('textarea[name="comentarios"]');
+                                                               if (checkboxFirma && labelFirma && textareaComentarios) {
+                                                                   if (!checkboxFirma.checked) {
+                                                                       textareaComentarios.setAttribute('required', 'true');
+                                                                   }
 
-                                                               if (checkboxFirma && labelFirma) {
                                                                    checkboxFirma.addEventListener('change', function () {
                                                                        if (this.checked) {
                                                                            labelFirma.textContent = 'Conforme';
+                                                                           textareaComentarios.removeAttribute('required');
+                                                                           textareaComentarios.classList.remove('is-invalid');
                                                                        } else {
                                                                            labelFirma.textContent = 'Rechazado';
+                                                                           textareaComentarios.setAttribute('required', 'true');
                                                                        }
                                                                    });
                                                                }

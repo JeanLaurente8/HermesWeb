@@ -3,8 +3,8 @@ package controlador;
 import modelo.*;
 import controlador.EmailHelper;
 import servicios.DniApiService;
-import javax.servlet.*;
-import javax.servlet.http.*;
+import jakarta.servlet.*;
+import jakarta.servlet.http.*;
 import java.io.IOException;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -55,8 +55,17 @@ public class EmpleadoServlet extends HttpServlet {
                 request.getRequestDispatcher("/WEB-INF/vistas/empleado.jsp").forward(request, response);
 
             } else if (accion.equals("eliminar")) {
-                dao.eliminar(Integer.parseInt(request.getParameter("id")));
-                session.setAttribute("success", "Empleado desactivado correctamente.");
+                Empleado sesion = (Empleado) request.getSession().getAttribute("empleado");
+                int idAEliminar = Integer.parseInt(request.getParameter("id"));
+
+                if (sesion != null && sesion.getIdEmpleado() == idAEliminar) {
+                    request.getSession().setAttribute("error", "No puedes desactivar tu propio usuario mientras tienes la sesión activa.");
+                    response.sendRedirect("EmpleadoServlet?accion=listar");
+                    return;
+                }
+
+                dao.eliminar(idAEliminar);
+                request.getSession().setAttribute("success", "Empleado desactivado correctamente.");
                 response.sendRedirect("EmpleadoServlet?accion=listar");
             }
         } finally {
@@ -101,6 +110,12 @@ public class EmpleadoServlet extends HttpServlet {
                 String dni = request.getParameter("dni");
                 String correo = request.getParameter("correo");
                 String username = request.getParameter("username");
+                String idArea = request.getParameter("idArea");
+                
+                if (idArea == null || idArea.trim().isEmpty()) {
+                    enviarErrorYRetornar(request, response, dao, areaDAO, accion, "Error: Debe seleccionar un área de trabajo.");
+                    return;
+                }
 
                 if (dni == null || !dni.matches("^[0-9]{8}$")) {
                     enviarErrorYRetornar(request, response, dao, areaDAO, accion, "Error: El DNI debe contener 8 números.");
@@ -153,9 +168,14 @@ public class EmpleadoServlet extends HttpServlet {
             }
 
             emp.setDni(request.getParameter("dni"));
-            emp.setNombre(request.getParameter("nombre").trim());
-            emp.setApellidoPaterno(request.getParameter("apellidoPaterno").trim());
-            emp.setApellidoMaterno(request.getParameter("apellidoMaterno").trim());
+
+            // los valores del formulario y se conservan los que ya tenía en BD.
+            if (!accion.equals("actualizar")) {
+                emp.setNombre(request.getParameter("nombre").trim());
+                emp.setApellidoPaterno(request.getParameter("apellidoPaterno").trim());
+                emp.setApellidoMaterno(request.getParameter("apellidoMaterno").trim());
+            }
+
             emp.setCorreo(request.getParameter("correo").trim());
             emp.setUsername(request.getParameter("username").trim());
             emp.setPassword(request.getParameter("password"));

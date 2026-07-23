@@ -70,15 +70,14 @@
             Articulo articuloEditar = (Articulo) request.getAttribute("articuloEditar");
             String errorBackend = (String) request.getAttribute("error");
 
-            // Recibimos el estado de OC pendiente del Servlet
             Boolean tieneOCPendiente = (Boolean) request.getAttribute("tieneOCPendiente");
             if (tieneOCPendiente == null) {
                 tieneOCPendiente = false;
             }
 
-            Integer ultimaCantidadPedida = (Integer) request.getAttribute("ultimaCantidadPedida");
-
             boolean tieneAccesoCompleto = AuthUtils.tieneAccesoCompleto(sesion, "Articulos");
+            boolean esGerenteCompras = sesion != null && "Gerente Compras".equalsIgnoreCase(sesion.getCargo());
+            boolean esEmpleado = sesion != null && "Empleado".equalsIgnoreCase(sesion.getCargo());
 
             int totalAlertas = 0;
             if (articulos != null) {
@@ -164,7 +163,6 @@
 
                                     <input type="hidden" name="generarOC" id="flagGenerarOC" value="false">
                                     <input type="hidden" name="idProveedorOC" id="valProveedorOC" value="">
-                                    <input type="hidden" name="cantidadOC" id="valCantidadOC" value="">
 
                                     <div class="col-md-3">
                                         <label class="form-label fw-semibold">Nombre del Artículo</label>
@@ -172,7 +170,7 @@
                                     </div>
                                     <div class="col-md-2">
                                         <label class="form-label fw-semibold">Stock Actual</label>
-                                        <input type="number" name="stock" class="form-control" value="<%= articuloEditar != null ? articuloEditar.getStock() : "0"%>" min="0" required>
+                                        <input type="number" name="stock" class="form-control" value="<%= articuloEditar != null ? articuloEditar.getStock() : "0"%>" min="0" required <%= esGerenteCompras ? "readonly title=\"Edición manual restringida por perfil\"" : ""%>>
                                     </div>
                                     <div class="col-md-2">
                                         <label class="form-label fw-semibold">Stock Límite</label>
@@ -225,13 +223,6 @@
                                     </div>
                                     <div class="modal-body text-start">
                                         <p>El stock que estás guardando es menor o igual al límite. Se generará una <strong>Orden de Compra Automática</strong>.</p>
-
-                                        <div class="mb-3">
-                                            <label class="form-label fw-semibold">Cantidad a Pedir</label>
-                                            <input type="number" id="inputCantidadOC" class="form-control" min="1" value="1" required>
-                                            <div class="form-text text-muted">Unidades que se solicitarán al proveedor. Esta cantidad quedará ligada al artículo en la OC y se usará luego para aumentar el stock al recepcionarla en Abastecimiento.</div>
-                                        </div>
-
                                         <p class="fw-semibold mb-2 mt-3">¿Requiere cambio de proveedor para esta OC?</p>
 
                                         <div class="form-check mb-2">
@@ -282,7 +273,7 @@
                                                 <th>Artículo</th>
                                                 <th class="text-center">Stock Actual</th>
                                                 <th class="text-center">Límite</th>
-                                                <th class="text-center">Precio Unit.</th>
+                                                <% if (!esEmpleado) { %><th class="text-center">Precio Unit.</th><% } %>
                                                 <th>Proveedor</th>
                                                 <th class="text-center">Estado</th>
                                                 <% if (tieneAccesoCompleto) { %><th class="text-center">Acciones</th><% } %>
@@ -304,9 +295,8 @@
                                                 </td>
                                                 <td class="text-center fw-bold fs-5 <%= alerta ? "text-danger" : "text-success"%>"><%= a.getStock()%></td>
                                                 <td class="text-center text-muted"><%= a.getStockLimite()%></td>
-                                                <td class="text-center fw-semibold">S/ <%= String.format("%.2f", a.getPrecio())%></td>
-                                                <td><small><%= a.getProveedor() != null ? a.getProveedor().getRazonSocial() : "Sin asignar"%></small></td>
-                                                <td class="text-center">
+                                                <% if (!esEmpleado) {%><td class="text-center fw-semibold">S/ <%= String.format("%.2f", a.getPrecio())%></td><% }%>
+                                                <td><small><%= a.getProveedor() != null ? a.getProveedor().getRazonSocial() : "Sin asignar"%></small></td>                                                <td class="text-center">
                                                     <span class="badge <%= alerta ? "bg-danger" : "bg-success"%>">
                                                         <%= alerta ? "ALERTA" : "OK"%>
                                                     </span>
@@ -323,7 +313,15 @@
                                             </tr>
                                             <% }
                                             } else {%>
-                                            <tr><td colspan="<%= tieneAccesoCompleto ? 8 : 7%>" class="text-center py-5 text-muted">
+                                            <%
+                                                int totalColumnas = 6;
+                                                if (!esEmpleado) {
+                                                    totalColumnas++;
+                                                }
+                                                if (tieneAccesoCompleto)
+                                                    totalColumnas++;
+                                            %>
+                                            <tr><td colspan="<%= totalColumnas%>" class="text-center py-5 text-muted">
                                                     <i class="fas fa-boxes fa-3x mb-3 d-block"></i>No hay artículos registrados
                                                 </td></tr>
                                                 <% }%>
@@ -357,32 +355,11 @@
                                                                const divNuevoProv = document.getElementById('divNuevoProveedor');
                                                                const btnConfirmarOC = document.getElementById('btnConfirmarOC');
 
-                                                               // Indicador por si ya hay una OC Pendiente
                                                                const tieneOCPendiente = <%= tieneOCPendiente%>;
-                                                               const ultimaCantidadPedida = <%= ultimaCantidadPedida != null ? ultimaCantidadPedida : "null"%>;
                                                                let modalOC;
 
-                                                               const modalOCEl = document.getElementById('modalCrearOCAutomatica');
-                                                               if (modalOCEl) {
-                                                                   modalOC = new bootstrap.Modal(modalOCEl);
-
-                                                                   modalOCEl.addEventListener('show.bs.modal', function () {
-                                                                       const inputCantidadOC = document.getElementById('inputCantidadOC');
-                                                                       let sugerido;
-
-                                                                       if (ultimaCantidadPedida !== null) {
-                                                                           // Ya hubo una OC previa para este artículo: repetimos esa cantidad
-                                                                           sugerido = ultimaCantidadPedida;
-                                                                       } else {
-                                                                           // Nunca se pidió antes: fallback al cálculo por stock
-                                                                           const stockActual = parseInt(formArt.querySelector('input[name="stock"]').value) || 0;
-                                                                           const stockLimite = parseInt(formArt.querySelector('input[name="stockLimite"]').value) || 0;
-                                                                           sugerido = Math.max((stockLimite * 2) - stockActual, stockLimite, 1);
-                                                                       }
-
-                                                                       inputCantidadOC.value = sugerido;
-                                                                       inputCantidadOC.classList.remove('is-invalid');
-                                                                   });
+                                                               if (document.getElementById('modalCrearOCAutomatica')) {
+                                                                   modalOC = new bootstrap.Modal(document.getElementById('modalCrearOCAutomatica'));
                                                                }
 
                                                                if (radioSi && radioNo) {
@@ -401,7 +378,6 @@
                                                                        const stock = parseInt(formArt.querySelector('input[name="stock"]').value);
                                                                        const limite = parseInt(formArt.querySelector('input[name="stockLimite"]').value);
 
-                                                                       // Lógica: Si el stock bajó y no se ha confirmado y no existe una OC pendiente: Mostrar Modal
                                                                        if (stock <= limite && formArt.dataset.ocConfirmada !== 'true' && !tieneOCPendiente) {
                                                                            e.preventDefault();
                                                                            modalOC.show();
@@ -411,15 +387,7 @@
 
                                                                if (btnConfirmarOC) {
                                                                    btnConfirmarOC.addEventListener('click', function () {
-                                                                       const inputCantidadOC = document.getElementById('inputCantidadOC');
-                                                                       const cantidadOC = parseInt(inputCantidadOC.value, 10);
-                                                                       if (!cantidadOC || cantidadOC <= 0) {
-                                                                           inputCantidadOC.classList.add('is-invalid');
-                                                                           return;
-                                                                       }
-
                                                                        document.getElementById('flagGenerarOC').value = "true";
-                                                                       document.getElementById('valCantidadOC').value = cantidadOC;
                                                                        const selectProvArticulo = formArt.querySelector('select[name="idProveedor"]');
                                                                        document.getElementById('valProveedorOC').value = radioSi.checked ? document.getElementById('selectNuevoProveedor').value : selectProvArticulo.value;
                                                                        formArt.dataset.ocConfirmada = 'true';

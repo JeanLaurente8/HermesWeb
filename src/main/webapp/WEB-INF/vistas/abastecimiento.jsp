@@ -8,44 +8,13 @@
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
         <style>
-            .sidebar{
-                background:linear-gradient(180deg,#1a3a5c 0%,#0f2340 100%);
-                min-height:100vh;
-                color:white
-            }
-            .sidebar .nav-link{
-                color:rgba(255,255,255,.75);
-                padding:10px 20px;
-                border-radius:8px;
-                margin:2px 8px;
-                transition:.2s;
-                font-size:14px
-            }
-            .sidebar .nav-link:hover,.sidebar .nav-link.active{
-                background:rgba(255,255,255,.12);
-                color:white
-            }
-            .sidebar .nav-section{
-                font-size:10px;
-                text-transform:uppercase;
-                letter-spacing:1px;
-                color:rgba(255,255,255,.4);
-                padding:12px 20px 4px
-            }
-            .main-content{
-                background:#f1f5f9;
-                min-height:100vh
-            }
-            .topbar{
-                background:white;
-                padding:12px 24px;
-                border-bottom:1px solid #e2e8f0
-            }
-            .card-modern{
-                border:none;
-                border-radius:12px;
-                box-shadow:0 2px 8px rgba(0,0,0,.07)
-            }
+            .sidebar{ background:linear-gradient(180deg,#1a3a5c 0%,#0f2340 100%); min-height:100vh; color:white }
+            .sidebar .nav-link{ color:rgba(255,255,255,.75); padding:10px 20px; border-radius:8px; margin:2px 8px; transition:.2s; font-size:14px }
+            .sidebar .nav-link:hover,.sidebar .nav-link.active{ background:rgba(255,255,255,.12); color:white }
+            .sidebar .nav-section{ font-size:10px; text-transform:uppercase; letter-spacing:1px; color:rgba(255,255,255,.4); padding:12px 20px 4px }
+            .main-content{ background:#f1f5f9; min-height:100vh }
+            .topbar{ background:white; padding:12px 24px; border-bottom:1px solid #e2e8f0 }
+            .card-modern{ border:none; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,.07) }
         </style>
     </head>
     <body>
@@ -81,16 +50,15 @@
                             </div>
                             <div class="card-body">
                                 <form action="${pageContext.request.contextPath}/AbastecimientoServlet" method="post" class="row g-3 align-items-end needs-validation" novalidate>
-
+                                    
                                     <div class="col-md-5">
                                         <label class="form-label fw-semibold">Orden de Compra a Recibir</label>
                                         <select name="idOrden" class="form-select" required>
-                                            <option value="">-- Seleccionar OC Autorizada --</option>
+                                            <option value="">-- Seleccionar OC Aprobada --</option>
                                             <% if (ordenes != null) {
-                                                    for (Ordencompra o : ordenes) {%>
-                                            <option value="<%= o.getIdOrden()%>">OC-<%= o.getIdOrden()%> - <%= o.getProveedor() != null ? o.getProveedor().getRazonSocial() : ""%></option>
-                                            <% }
-                                                }%>
+                                                for (Ordencompra o : ordenes) { %>
+                                                <option value="<%= o.getIdOrden()%>">OC-<%= o.getIdOrden()%> - <%= o.getProveedor() != null ? o.getProveedor().getRazonSocial() : ""%></option>
+                                            <% }} %>
                                         </select>
                                         <div class="invalid-feedback">Debe seleccionar una orden de compra válida.</div>
                                     </div>
@@ -134,15 +102,15 @@
                                                 <td>
                                                     <% List<DetalleOc> detallesRecibidos = a.getOrden().getDetalles();
                                                         if (detallesRecibidos != null && !detallesRecibidos.isEmpty()) {
-                                                            for (DetalleOc d : detallesRecibidos) {%>
+                                                            for (DetalleOc d : detallesRecibidos) { %>
                                                     <span class="badge bg-success-subtle text-success-emphasis border d-block mb-1 text-start">
                                                         <%= d.getArticulo() != null ? d.getArticulo().getNombre() : "Artículo eliminado"%>
                                                         <strong>+<%= d.getCantidad()%></strong>
                                                     </span>
                                                     <% }
-                                                    } else { %>
+                                                        } else { %>
                                                     <span class="text-muted small">Sin detalle</span>
-                                                    <% }%>
+                                                    <% } %>
                                                 </td>
                                                 <td><small class="fw-semibold"><%= a.getEmpleado().getNombreCompleto()%></small></td>
                                                 <td><small class="text-muted"><%= a.getFechaRecepcion() != null ? a.getFechaRecepcion().toString().substring(0, 16) : "—"%></small></td>

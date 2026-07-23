@@ -1,8 +1,8 @@
 package controlador;
 
 import modelo.*;
-import javax.servlet.*;
-import javax.servlet.http.*;
+import jakarta.servlet.*;
+import jakarta.servlet.http.*;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
@@ -33,12 +33,11 @@ public class ArticuloServlet extends HttpServlet {
                 request.setAttribute("articulos", dao.listar());
                 request.setAttribute("proveedores", provDAO.listarActivos());
 
+                // Verificamos si existe OC para no mostrar modal si es duplicado
                 OrdenCompraDAO ocDAO = new OrdenCompraDAO();
                 boolean tieneOC = ocDAO.existeOCAutomaticaParaArticulo(art.getNombre());
-                Integer ultimaCantidadPedida = ocDAO.buscarUltimaCantidadPedida(art.getIdArticulo());
                 ocDAO.close();
                 request.setAttribute("tieneOCPendiente", tieneOC);
-                request.setAttribute("ultimaCantidadPedida", ultimaCantidadPedida);
 
                 request.getRequestDispatcher("/WEB-INF/vistas/articulo.jsp").forward(request, response);
 
@@ -169,11 +168,9 @@ public class ArticuloServlet extends HttpServlet {
                     // Verificar OC pendiente para evitar duplicados
                     if (ocDAO.existeOCAutomaticaParaArticulo(nombre.trim())) {
                         request.getSession().setAttribute("ocAdvertencia",
-                                "El artículo \"" + nombre.trim() + "\" requiere reposición, pero ya cuenta con una Orden de Compra en proceso. No se generó una OC duplicada.");
+                            "El artículo \"" + nombre.trim() + "\" requiere reposición, pero ya cuenta con una Orden de Compra en proceso. No se generó una OC duplicada.");
                     } else if ("true".equals(generarOC)) {
 
-                        // Cantidad a pedir ingresada en el modal. Si no llega o es
-                        // inválida, usamos 1 como respaldo para no romper la OC.
                         int cantidadOC;
                         try {
                             cantidadOC = Integer.parseInt(request.getParameter("cantidadOC"));
@@ -204,10 +201,16 @@ public class ArticuloServlet extends HttpServlet {
                             oc.setProveedor(proveedorSeleccionado);
                         }
 
-                        // ── LIGAR ARTÍCULO + CANTIDAD A LA OC (detalle_oc) ──────
+
                         DetalleOc detalle = new DetalleOc();
                         detalle.setArticulo(a);
                         detalle.setCantidad(cantidadOC);
+
+                        if (a.getProveedor() != null) {
+                            detalle.setProveedor(a.getProveedor());
+                        } else if (proveedorSeleccionado != null) {
+                            detalle.setProveedor(proveedorSeleccionado);
+                        }
                         oc.addDetalle(detalle);
 
                         ocDAO.guardar(oc);

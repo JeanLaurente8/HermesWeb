@@ -51,6 +51,7 @@
     <body>
         <%
             Empleado sesion = (Empleado) session.getAttribute("empleado");
+            boolean esEmpleado = sesion != null && "Empleado".equalsIgnoreCase(sesion.getCargo());
             List<Solicitud> solicitudes = (List<Solicitud>) request.getAttribute("solicitudes");
             List<Devolucion> devoluciones = (List<Devolucion>) request.getAttribute("devoluciones");
             String errorBackend = (String) request.getAttribute("error");
@@ -144,11 +145,22 @@
                                 <div class="table-responsive">
                                     <table class="table table-hover mb-0">
                                         <thead class="bg-light">
-                                            <tr><th class="px-4">#</th><th>Fecha</th><th>Solicitud</th><th>Artículo</th><th class="text-center">Cant. Devuelta</th><th>Motivo</th><th>Gestionado por</th></tr>
+                                            <tr>
+                                                <th class="px-4">#</th>
+                                                <th>Fecha</th>
+                                                <th>Solicitud</th>
+                                                <th>Artículo</th>
+                                                <th class="text-center">Cant. Devuelta</th>
+                                                <th>Motivo</th>
+                                                <th>Gestionado por</th>
+                                                <th class="text-center">Estado</th>
+                                                    <%-- Solo se muestra la columna de acciones si NO es Empleado --%>
+                                                    <% if (!esEmpleado) { %><th class="text-center">Acciones</th><% } %>
+                                            </tr>
                                         </thead>
                                         <tbody>
                                             <% if (devoluciones != null && !devoluciones.isEmpty()) {
-                                                    for (Devolucion d : devoluciones) {%>
+                for (Devolucion d : devoluciones) {%>
                                             <tr>
                                                 <td class="px-4 fw-semibold text-primary">DEV-<%= d.getIdDevolucion()%></td>
                                                 <td><small class="text-muted"><%= d.getFechaDevolucion() != null ? d.getFechaDevolucion().toString().replace("T", " ").substring(0, 16) : "—"%></small></td>
@@ -157,14 +169,41 @@
                                                 <td class="text-center fw-bold"><%= d.getCantidadDevuelta()%></td>
                                                 <td><small><%= d.getMotivo() != null ? d.getMotivo() : "—"%></small></td>
                                                 <td><small><%= d.getEmpleado() != null ? d.getEmpleado().getNombreCompleto() : "—"%></small></td>
+
+                                                <td class="text-center">
+                                                    <% if ("Aprobado".equals(d.getEstadoDevolucion())) { %>
+                                                    <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Aprobado</span>
+                                                    <% } else { %>
+                                                    <span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i>En revisión</span>
+                                                    <% } %>
+                                                </td>
+
+                                                <%-- Todos los botones de acción agrupados dentro de la validación del Empleado --%>
+                                                <% if (!esEmpleado) { %>
+                                                <td class="text-center">
+                                                    <a href="..." class="btn btn-sm btn-outline-primary me-1"><i class="fas fa-edit"></i></a>
+
+                                                    <% if ("En revisión".equals(d.getEstadoDevolucion())) {%>
+                                                    <a href="${pageContext.request.contextPath}/DevolucionServlet?accion=aprobar&id=<%= d.getIdDevolucion()%>" 
+                                                       class="btn btn-sm btn-outline-success" 
+                                                       onclick="return confirm('¿Confirmas que el artículo está en buen estado para aprobar la devolución y regresar el stock al inventario?')"
+                                                       title="Aprobar devolución">
+                                                        <i class="fas fa-check"></i>
+                                                    </a>
+                                                    <% } else { %>
+                                                    <span class="text-muted">—</span>
+                                                    <% } %>
+                                                </td>
+                                                <% } %>
                                             </tr>
                                             <% }
-                                            } else { %>
-                                            <tr><td colspan="7" class="text-center py-5 text-muted">No hay devoluciones registradas</td></tr>
+        } else {%>
+                                            <tr>
+                                                <td colspan="<%= esEmpleado ? 8 : 9%>" class="text-center py-5 text-muted">No hay devoluciones registradas</td>
+                                            </tr>
                                             <% }%>
                                         </tbody>
-                                    </table>
-                                </div>
+                                    </table>                                </div>
                             </div>
                         </div>
                     </div>
@@ -173,65 +212,64 @@
 
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
         <script>
-            const selectSolicitud = document.getElementById('selectSolicitud');
-            const displayCantidadOriginal = document.getElementById('displayCantidadOriginal');
-            const inputCantidadDevuelta = document.getElementById('inputCantidadDevuelta');
-            const formDevolucion = document.getElementById('formDevolucion');
-            const inputMotivoOculto = document.getElementById('inputMotivoOculto');
+                       const selectSolicitud = document.getElementById('selectSolicitud');
+                       const displayCantidadOriginal = document.getElementById('displayCantidadOriginal');
+                       const inputCantidadDevuelta = document.getElementById('inputCantidadDevuelta');
+                       const formDevolucion = document.getElementById('formDevolucion');
+                       const inputMotivoOculto = document.getElementById('inputMotivoOculto');
 
-            let cantidadOriginalActual = 0;
+                       let cantidadOriginalActual = 0;
 
-            selectSolicitud.addEventListener('change', function () {
-                const opt = this.options[this.selectedIndex];
-                const pendiente = opt.getAttribute('data-pendiente');
-                if (pendiente) {
-                    cantidadOriginalActual = parseInt(pendiente, 10);
-                    displayCantidadOriginal.value = cantidadOriginalActual;
-                    inputCantidadDevuelta.disabled = false;
-                    inputCantidadDevuelta.max = cantidadOriginalActual;
-                    inputCantidadDevuelta.value = cantidadOriginalActual;
-                } else {
-                    cantidadOriginalActual = 0;
-                    displayCantidadOriginal.value = '';
-                    inputCantidadDevuelta.disabled = true;
-                    inputCantidadDevuelta.value = '';
-                }
-            });
-            const modalMotivoEl = document.getElementById('modalMotivo');
-            const modalMotivo = new bootstrap.Modal(modalMotivoEl);
-            const inputMotivo = document.getElementById('inputMotivo');
-            const errorMotivo = document.getElementById('errorMotivo');
-            const btnConfirmarMotivo = document.getElementById('btnConfirmarMotivo');
+                       selectSolicitud.addEventListener('change', function () {
+                           const opt = this.options[this.selectedIndex];
+                           const pendiente = opt.getAttribute('data-pendiente');
+                           if (pendiente) {
+                               cantidadOriginalActual = parseInt(pendiente, 10);
+                               displayCantidadOriginal.value = cantidadOriginalActual;
+                               inputCantidadDevuelta.disabled = false;
+                               inputCantidadDevuelta.max = cantidadOriginalActual;
+                               inputCantidadDevuelta.value = cantidadOriginalActual;
+                           } else {
+                               cantidadOriginalActual = 0;
+                               displayCantidadOriginal.value = '';
+                               inputCantidadDevuelta.disabled = true;
+                               inputCantidadDevuelta.value = '';
+                           }
+                       });
+                       const modalMotivoEl = document.getElementById('modalMotivo');
+                       const modalMotivo = new bootstrap.Modal(modalMotivoEl);
+                       const inputMotivo = document.getElementById('inputMotivo');
+                       const errorMotivo = document.getElementById('errorMotivo');
+                       const btnConfirmarMotivo = document.getElementById('btnConfirmarMotivo');
 
-            formDevolucion.addEventListener('submit', function (e) {
-                if (!formDevolucion.checkValidity()) {
-                    e.preventDefault();
-                    formDevolucion.classList.add('was-validated');
-                    return;
-                }
+                       formDevolucion.addEventListener('submit', function (e) {
+                           if (!formDevolucion.checkValidity()) {
+                               e.preventDefault();
+                               formDevolucion.classList.add('was-validated');
+                               return;
+                           }
 
-                const cantidadDevuelta = parseInt(inputCantidadDevuelta.value, 10);
+                           const cantidadDevuelta = parseInt(inputCantidadDevuelta.value, 10);
 
-                // Devolución parcial: pedimos motivo obligatorio antes de enviar
-                if (cantidadDevuelta < cantidadOriginalActual && formDevolucion.dataset.motivoConfirmado !== 'true') {
-                    e.preventDefault();
-                    inputMotivo.value = '';
-                    errorMotivo.style.display = 'none';
-                    modalMotivo.show();
-                }
-            });
+                           if (cantidadDevuelta < cantidadOriginalActual && formDevolucion.dataset.motivoConfirmado !== 'true') {
+                               e.preventDefault();
+                               inputMotivo.value = '';
+                               errorMotivo.style.display = 'none';
+                               modalMotivo.show();
+                           }
+                       });
 
-            btnConfirmarMotivo.addEventListener('click', function () {
-                const motivo = inputMotivo.value.trim();
-                if (!motivo) {
-                    errorMotivo.style.display = 'block';
-                    return;
-                }
-                inputMotivoOculto.value = motivo;
-                formDevolucion.dataset.motivoConfirmado = 'true';
-                modalMotivo.hide();
-                formDevolucion.submit();
-            });
+                       btnConfirmarMotivo.addEventListener('click', function () {
+                           const motivo = inputMotivo.value.trim();
+                           if (!motivo) {
+                               errorMotivo.style.display = 'block';
+                               return;
+                           }
+                           inputMotivoOculto.value = motivo;
+                           formDevolucion.dataset.motivoConfirmado = 'true';
+                           modalMotivo.hide();
+                           formDevolucion.submit();
+                       });
         </script>
     </body>
 </html>

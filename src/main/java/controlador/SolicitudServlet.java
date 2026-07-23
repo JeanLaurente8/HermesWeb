@@ -2,8 +2,8 @@ package controlador;
 
 import modelo.*;
 import util.AuthUtils;
-import javax.servlet.*;
-import javax.servlet.http.*;
+import jakarta.servlet.*;
+import jakarta.servlet.http.*;
 import java.io.IOException;
 
 public class SolicitudServlet extends HttpServlet {
@@ -16,10 +16,16 @@ public class SolicitudServlet extends HttpServlet {
             return;
         }
 
+        Empleado sesion = (Empleado) request.getSession().getAttribute("empleado");
+        // Analista Compras (y cualquier rol no listado) ya no tiene acceso a Solicitudes
+        if (!AuthUtils.puedeVerModulo(sesion, "Solicitudes")) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN);
+            return;
+        }
+
         String accion = request.getParameter("accion");
         SolicitudDAO dao = new SolicitudDAO();
         ArticuloDAO artDAO = new ArticuloDAO();
-        Empleado sesion = (Empleado) request.getSession().getAttribute("empleado");
 
         try {
             if (accion == null || accion.equals("listar")) {
@@ -37,6 +43,8 @@ public class SolicitudServlet extends HttpServlet {
                     return;
                 }
                 int id = Integer.parseInt(request.getParameter("id"));
+
+                // Aquí solo se aprueba la solicitud. El stock NO se toca hasta que se registre la Conformidad.
                 dao.cambiarEstado(id, "Aprobada", null);
                 response.sendRedirect("SolicitudServlet?accion=listar");
 
@@ -58,10 +66,17 @@ public class SolicitudServlet extends HttpServlet {
         }
 
         request.setCharacterEncoding("UTF-8");
+
+        Empleado sesion = (Empleado) request.getSession().getAttribute("empleado");
+        // Analista Compras (y cualquier rol no listado) ya no tiene acceso a Solicitudes
+        if (!AuthUtils.puedeVerModulo(sesion, "Solicitudes")) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN);
+            return;
+        }
+
         String accion = request.getParameter("accion");
         SolicitudDAO dao = new SolicitudDAO();
         ArticuloDAO artDAO = new ArticuloDAO();
-        Empleado sesion = (Empleado) request.getSession().getAttribute("empleado");
 
         try {
             // RECHAZAR CON MOTIVO
@@ -85,6 +100,11 @@ public class SolicitudServlet extends HttpServlet {
 
             // GUARDAR NUEVA SOLICITUD (MAESTRO-DETALLE)
             if ("guardar".equals(accion)) {
+                if (!AuthUtils.tieneAccesoCompleto(sesion, "Solicitudes")) {
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN);
+                    return;
+                }
+
                 String descripcion = request.getParameter("descripcion");
 
                 // Validaciones
@@ -122,9 +142,27 @@ public class SolicitudServlet extends HttpServlet {
                     try {
                         cantidad = Integer.parseInt(cant);
                     } catch (NumberFormatException ex) {
+                        cantidad = 1;
                     }
                     if (cantidad < 1) {
                         cantidad = 1;
+                    }
+
+                    // BUSCAR EL ARTÍCULO PARA VALIDAR SU STOCK ACTUAL
+                    Articulo art = artDAO.buscar(Integer.parseInt(idArt));
+                    if (art == null) {
+                        request.setAttribute("error", "Uno de los artículos seleccionados no existe.");
+                        cargarListado(request, dao, artDAO, sesion);
+                        request.getRequestDispatcher("/WEB-INF/vistas/solicitud.jsp").forward(request, response);
+                        return;
+                    }
+
+                    // VALIDACIÓN BACKEND: Cantidad mayor al stock
+                    if (cantidad > art.getStock()) {
+                        request.setAttribute("error", "Error: La cantidad solicitada (" + cantidad + ") para el artículo '" + art.getNombre() + "' supera el stock disponible (" + art.getStock() + ").");
+                        cargarListado(request, dao, artDAO, sesion);
+                        request.getRequestDispatcher("/WEB-INF/vistas/solicitud.jsp").forward(request, response);
+                        return;
                     }
 
                     Solicitud s = new Solicitud();
@@ -132,7 +170,7 @@ public class SolicitudServlet extends HttpServlet {
                     s.setEstadoSolicitud("Pendiente");
                     s.setEmpleado(empSesion);
                     s.setArea(empSesion.getArea());
-                    s.setArticulo(artDAO.buscar(Integer.parseInt(idArt)));
+                    s.setArticulo(art);
                     s.setCantidad(cantidad);
                     dao.guardar(s);
                 }

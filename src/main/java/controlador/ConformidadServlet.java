@@ -1,8 +1,8 @@
 package controlador;
 
 import modelo.*;
-import javax.servlet.*;
-import javax.servlet.http.*;
+import jakarta.servlet.*;
+import jakarta.servlet.http.*;
 import java.io.IOException;
 import java.util.List;
 
@@ -28,8 +28,7 @@ public class ConformidadServlet extends HttpServlet {
                 request.getRequestDispatcher("/WEB-INF/vistas/conformidad.jsp").forward(request, response);
 
             } else if (accion.equals("editar")) {
-                // Bloqueo para Empleado y Asistente Almacén
-                if (esEmpleado(sesion) || esAsistenteAlmacen(sesion)) {
+                if (esEmpleado(sesion) || esAsistenteAlmacen(sesion) || esCoordinadorAlmacen(sesion)) {
                     response.sendError(HttpServletResponse.SC_FORBIDDEN);
                     return;
                 }
@@ -38,8 +37,7 @@ public class ConformidadServlet extends HttpServlet {
                 request.getRequestDispatcher("/WEB-INF/vistas/conformidad.jsp").forward(request, response);
 
             } else if (accion.equals("eliminar")) {
-                // Bloqueo para Empleado y Asistente Almacén
-                if (esEmpleado(sesion) || esAsistenteAlmacen(sesion)) {
+                if (esEmpleado(sesion) || esAsistenteAlmacen(sesion) || esCoordinadorAlmacen(sesion)) {
                     response.sendError(HttpServletResponse.SC_FORBIDDEN);
                     return;
                 }
@@ -70,8 +68,7 @@ public class ConformidadServlet extends HttpServlet {
         Empleado sesion = (Empleado) request.getSession().getAttribute("empleado");
 
         try {
-            // Bloqueo total de POST para Asistente Almacén
-            if (esAsistenteAlmacen(sesion)) {
+            if (esAsistenteAlmacen(sesion) || esCoordinadorAlmacen(sesion)) {
                 response.sendError(HttpServletResponse.SC_FORBIDDEN);
                 return;
             }
@@ -127,17 +124,27 @@ public class ConformidadServlet extends HttpServlet {
             if ("actualizar".equals(accion)) {
                 c = dao.buscar(Integer.parseInt(request.getParameter("idConformidad")));
                 boolean eraConforme = c.isFirmaConformidad();
-
-                if (!eraConforme && esConformeNuevo) descontarStock = true;
-                if (eraConforme && !esConformeNuevo) devolverStock = true;
-
+                if (!eraConforme && esConformeNuevo) {
+                    descontarStock = true;
+                }
+                if (eraConforme && !esConformeNuevo) {
+                    devolverStock = true;
+                }
             } else {
                 c = new Conformidad();
-                if (esConformeNuevo) descontarStock = true;
+                if (esConformeNuevo) {
+                    descontarStock = true;
+                }
+            }
+
+            String comentariosForm = request.getParameter("comentarios");
+            if (!esConformeNuevo && (comentariosForm == null || comentariosForm.trim().isEmpty())) {
+                enviarErrorYRetornar(request, response, dao, solDAO, empDAO, accion, "Error: Debe ingresar un motivo obligatoriamente al rechazar la conformidad.");
+                return;
             }
 
             c.setFirmaConformidad(esConformeNuevo);
-            c.setComentarios(request.getParameter("comentarios") != null ? request.getParameter("comentarios").trim() : "");
+            c.setComentarios(comentariosForm != null ? comentariosForm.trim() : "");
 
             String idSol = request.getParameter("idSolicitud");
             if (idSol != null && !idSol.isEmpty()) {
@@ -165,7 +172,7 @@ public class ConformidadServlet extends HttpServlet {
                     return;
                 }
             }
-            
+
             if ("actualizar".equals(accion)) {
                 dao.actualizar(c);
             } else {
@@ -173,33 +180,74 @@ public class ConformidadServlet extends HttpServlet {
             }
 
             if (c.getSolicitud() != null) {
-                if (descontarStock || devolverStock) {
-                    if (c.getSolicitud().getArticulo() != null) {
-                        int idArticuloVinc = c.getSolicitud().getArticulo().getIdArticulo();
-                        Articulo articuloDB = artDAO.buscar(idArticuloVinc);
-                        int cantidadMovimiento = c.getSolicitud().getCantidad();
-                        int stockActual = articuloDB.getStock();
+                if ((descontarStock || devolverStock) && c.getSolicitud().getArticulo() != null) {
+                    int idArticuloVinc = c.getSolicitud().getArticulo().getIdArticulo();
+                    Articulo articuloDB = artDAO.buscar(idArticuloVinc);
+                    int cantidadMovimiento = c.getSolicitud().getCantidad();
+                    int stockActual = articuloDB.getStock();
 
-                        if (descontarStock) {
-                            articuloDB.setStock(stockActual - cantidadMovimiento);
-                        } else if (devolverStock) {
-                            articuloDB.setStock(stockActual + cantidadMovimiento);
+                    if (descontarStock) {
+                        int nuevoStock = stockActual - cantidadMovimiento;
+                        if (nuevoStock < 0) nuevoStock = 0;
+                        articuloDB.setStock(nuevoStock);
+                        
+                        boolean entraEnAlerta = nuevoStock <= articuloDB.getStockLimite();
+                        if (entraEnAlerta) {
+                            articuloDB.setRequiereCompra(true);
+                        }
+                        
+                        artDAO.actualizar(articuloDB);
+                        
+                        if (entraEnAlerta) {
+                            OrdenCompraDAO ocDAO = new OrdenCompraDAO();
+                            try {
+                                if (!ocDAO.existeOCAutomaticaParaArticulo(articuloDB.getNombre())) {
+                                    Ordencompra ocAuto = new Ordencompra();
+                                    ocAuto.setFechaGeneracion(java.time.LocalDateTime.now());
+                                    ocAuto.setEstadoOc("En Revisión");
+                                    ocAuto.setDescripcion("OC Automática por alerta de stock. Entregado en SOL-" + c.getSolicitud().getIdSolicitud());
+                                    ocAuto.setEsAutomatica(true);
+                                    
+                                    ocAuto.setAnalista(ocDAO.obtenerAnalista());
+                                    ocAuto.setGerente(ocDAO.obtenerGerente());
+                                    if (articuloDB.getProveedor() != null) {
+                                        ocAuto.setProveedor(articuloDB.getProveedor());
+                                    }
+                                    
+                                    DetalleOc detalle = new DetalleOc();
+                                    detalle.setArticulo(articuloDB);
+                                    int cantidadReponer = articuloDB.getStockLimite() > 0 ? (articuloDB.getStockLimite() * 2) : 10;
+                                    detalle.setCantidad(cantidadReponer);
+                                    ocAuto.addDetalle(detalle);
+                                    
+                                    ocDAO.guardar(ocAuto);
+                                }
+                            } finally {
+                                ocDAO.close();
+                            }
+                        }
+                        
+                    } else if (devolverStock) {
+                        int stockRecuperado = stockActual + cantidadMovimiento;
+                        articuloDB.setStock(stockRecuperado);
+                        
+                        if (stockRecuperado > articuloDB.getStockLimite()) {
+                            articuloDB.setRequiereCompra(false);
                         }
                         artDAO.actualizar(articuloDB);
                     }
+                }
 
+                boolean debeActualizarEstado = "guardar".equals(accion) || descontarStock || devolverStock;
+                if (debeActualizarEstado) {
                     Solicitud sol = c.getSolicitud();
-                    if (descontarStock) {
-                        sol.setEstadoSolicitud("Entregada");
-                    } else if (devolverStock) {
-                        sol.setEstadoSolicitud("Pendiente");
-                    }
+                    sol.setEstadoSolicitud(esConformeNuevo ? "Entregada" : "Rechazada");
                     solDAO.actualizar(sol);
                 }
             }
 
             response.sendRedirect("ConformidadServlet?accion=listar");
-            
+
         } finally {
             dao.close();
             solDAO.close();
@@ -207,7 +255,7 @@ public class ConformidadServlet extends HttpServlet {
             artDAO.close();
         }
     }
-    
+
     private void enviarErrorYRetornar(HttpServletRequest request, HttpServletResponse response, ConformidadDAO dao, SolicitudDAO solDAO, EmpleadoDAO empDAO, String accion, String mensajeError) throws ServletException, IOException {
         request.setAttribute("error", mensajeError);
         Empleado sesion = (Empleado) request.getSession().getAttribute("empleado");
@@ -222,33 +270,64 @@ public class ConformidadServlet extends HttpServlet {
     }
 
     private void cargarListado(HttpServletRequest request, ConformidadDAO dao, SolicitudDAO solDAO, EmpleadoDAO empDAO, Empleado sesion) {
+        List<Conformidad> listaConformidades;
+
         if (esEmpleado(sesion)) {
-            request.setAttribute("conformidades", dao.listarPorEmpleado(sesion.getIdEmpleado()));
-            request.setAttribute("solicitudes", solDAO.listarPorEmpleado(sesion.getIdEmpleado()));
+            listaConformidades = dao.listarPorEmpleado(sesion.getIdEmpleado());
+            request.setAttribute("solicitudes", solDAO.listarParaConformidadPorEmpleado(sesion.getIdEmpleado()));
         } else {
-            request.setAttribute("conformidades", dao.listar());
-            request.setAttribute("solicitudes", solDAO.listar());
+            listaConformidades = dao.listar();
+            request.setAttribute("solicitudes", solDAO.listarParaConformidad());
         }
+
+        String filtro = request.getParameter("filtro");
+        boolean mostrarTodo = "todo".equals(filtro);
+
+        if (!mostrarTodo && listaConformidades != null) {
+            int mesActual = java.time.LocalDateTime.now().getMonthValue();
+            int anioActual = java.time.LocalDateTime.now().getYear();
+
+            listaConformidades = listaConformidades.stream()
+                    .filter(c -> c.getFechaConformidad() != null
+                    && c.getFechaConformidad().getMonthValue() == mesActual
+                    && c.getFechaConformidad().getYear() == anioActual)
+                    .collect(java.util.stream.Collectors.toList());
+        }
+
+        request.setAttribute("conformidades", listaConformidades);
+        request.setAttribute("mostrarTodo", mostrarTodo);
         request.setAttribute("empleados", empDAO.listar());
     }
 
     private boolean esEmpleado(Empleado sesion) {
-        if (sesion == null) return false;
+        if (sesion == null) {
+            return false;
+        }
         String cargo = sesion.getCargo() != null ? sesion.getCargo() : "";
         return cargo.equalsIgnoreCase("Empleado");
     }
 
     private boolean esAsistenteAlmacen(Empleado sesion) {
-        if (sesion == null) return false;
+        if (sesion == null) {
+            return false;
+        }
         String cargo = sesion.getCargo() != null ? sesion.getCargo() : "";
         return cargo.equalsIgnoreCase("Asistente Almacén") || cargo.equalsIgnoreCase("Asistente Almacen");
     }
 
+    private boolean esCoordinadorAlmacen(Empleado sesion) {
+        if (sesion == null) {
+            return false;
+        }
+        String cargo = sesion.getCargo() != null ? sesion.getCargo() : "";
+        return cargo.equalsIgnoreCase("Coordinador Almacén") || cargo.equalsIgnoreCase("Coordinador Almacen");
+    }
+
     private boolean esSolicitudDelEmpleado(Solicitud solicitud, Empleado empleado) {
         return solicitud != null
-            && solicitud.getEmpleado() != null
-            && empleado != null
-            && solicitud.getEmpleado().getIdEmpleado() == empleado.getIdEmpleado();
+                && solicitud.getEmpleado() != null
+                && empleado != null
+                && solicitud.getEmpleado().getIdEmpleado() == empleado.getIdEmpleado();
     }
 
     private boolean verificarSesion(HttpServletRequest req, HttpServletResponse res) throws IOException {

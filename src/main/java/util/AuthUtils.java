@@ -17,11 +17,11 @@ public class AuthUtils {
 
         switch (modulo) {
             case "Articulos":
-                // Asistente Almacén solo puede VER artículos (sin CRUD)
                 return cargo.equalsIgnoreCase("Gerente Compras")
                         || cargo.equalsIgnoreCase("Analista Compras")
                         || cargo.equalsIgnoreCase("Coordinador Almacén")
-                        || cargo.equalsIgnoreCase("Asistente Almacén");
+                        || cargo.equalsIgnoreCase("Asistente Almacén")
+                        || cargo.equalsIgnoreCase("Empleado");
 
             case "Proveedores":
                 return cargo.equalsIgnoreCase("Gerente Compras")
@@ -32,24 +32,34 @@ public class AuthUtils {
                         || cargo.equalsIgnoreCase("Analista Compras");
 
             case "Solicitudes":
-                // Empleados, Coordinador y Asistente Almacén pueden ver solicitudes
-                // Gerente y Analista también las ven para aprobar/rechazar
                 return cargo.equalsIgnoreCase("Empleado")
                         || cargo.equalsIgnoreCase("Coordinador Almacén")
                         || cargo.equalsIgnoreCase("Asistente Almacén")
-                        || cargo.equalsIgnoreCase("Gerente Compras")
-                        || cargo.equalsIgnoreCase("Analista Compras");
+                        || cargo.equalsIgnoreCase("Gerente Compras");
 
             case "Conformidad":
-                // Asistente Almacén solo VE el listado (sin CRUD)
                 return cargo.equalsIgnoreCase("Empleado")
-                        || cargo.equalsIgnoreCase("Asistente Almacén");
+                        || cargo.equalsIgnoreCase("Asistente Almacén")
+                        || cargo.equalsIgnoreCase("Coordinador Almacén");
 
             case "Empleados":
                 return cargo.equalsIgnoreCase("Gerente Compras");
 
             case "Areas":
                 return cargo.equalsIgnoreCase("Gerente Compras");
+
+            case "Abastecimiento":
+                return cargo.equalsIgnoreCase("Gerente Compras")
+                        || cargo.equalsIgnoreCase("Analista Compras")
+                        || cargo.equalsIgnoreCase("Coordinador Almacén")
+                        || cargo.equalsIgnoreCase("Asistente Almacén");
+
+            case "Devolucion":
+                return cargo.equalsIgnoreCase("Empleado")
+                        || cargo.equalsIgnoreCase("Coordinador Almacén")
+                        || cargo.equalsIgnoreCase("Asistente Almacén")
+                        || cargo.equalsIgnoreCase("Gerente Compras")
+                        || cargo.equalsIgnoreCase("Analista Compras");
 
             default:
                 return false;
@@ -69,7 +79,6 @@ public class AuthUtils {
 
         switch (modulo) {
             case "Articulos":
-                // Asistente Almacén NO tiene acceso completo, solo visualiza
                 return cargo.equalsIgnoreCase("Gerente Compras")
                         || cargo.equalsIgnoreCase("Coordinador Almacén");
 
@@ -81,13 +90,10 @@ public class AuthUtils {
                         || cargo.equalsIgnoreCase("Analista Compras");
 
             case "Solicitudes":
-                // Empleado y Coordinador pueden crear solicitudes
-                // Asistente Almacén NO puede crear solicitudes
                 return cargo.equalsIgnoreCase("Empleado")
                         || cargo.equalsIgnoreCase("Coordinador Almacén");
 
             case "Conformidad":
-                // Asistente Almacén SOLO visualiza, no puede crear/editar conformidades
                 return cargo.equalsIgnoreCase("Empleado");
 
             case "Empleados":
@@ -99,7 +105,8 @@ public class AuthUtils {
             case "Abastecimiento":
                 return cargo.equalsIgnoreCase("Gerente Compras")
                         || cargo.equalsIgnoreCase("Analista Compras")
-                        || cargo.equalsIgnoreCase("Coordinador Almacén");
+                        || cargo.equalsIgnoreCase("Coordinador Almacén")
+                        || cargo.equalsIgnoreCase("Asistente Almacén");
 
             case "Devolucion":
                 return cargo.equalsIgnoreCase("Empleado")
@@ -113,7 +120,6 @@ public class AuthUtils {
         }
     }
 
-    // Puede aprobar o rechazar solicitudes
     public static boolean puedeGestionarSolicitudes(Empleado e) {
         if (e == null) {
             return false;
@@ -122,7 +128,6 @@ public class AuthUtils {
         String username = e.getUsername() != null ? e.getUsername() : "";
         return username.equalsIgnoreCase("admin")
                 || cargo.equalsIgnoreCase("Gerente Compras")
-                || cargo.equalsIgnoreCase("Asistente Almacén")
-                || cargo.equalsIgnoreCase("Analista Compras");
+                || cargo.equalsIgnoreCase("Asistente Almacén");
     }
 }

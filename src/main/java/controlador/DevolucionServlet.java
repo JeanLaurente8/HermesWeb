@@ -1,8 +1,9 @@
 package controlador;
 
 import modelo.*;
-import javax.servlet.*;
-import javax.servlet.http.*;
+import util.AuthUtils;
+import jakarta.servlet.*;
+import jakarta.servlet.http.*;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -18,15 +19,29 @@ public class DevolucionServlet extends HttpServlet {
             return;
         }
 
-        SolicitudDAO solDAO = new SolicitudDAO();
-        DevolucionDAO devDAO = new DevolucionDAO();
-        try {
-            List<Solicitud> todas = solDAO.listar();
-            todas.removeIf(s -> !"Aprobada".equals(s.getEstadoSolicitud()));
+        Empleado sesion = (Empleado) request.getSession().getAttribute("empleado");
+        if (!AuthUtils.tieneAccesoCompleto(sesion, "Devolucion")) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN);
+            return;
+        }
 
-            // Calculamos cuánto queda pendiente por devolver de cada solicitud
-            // (cantidad original - lo ya devuelto) y descartamos las que ya
-            // fueron devueltas por completo.
+        DevolucionDAO devDAO = new DevolucionDAO();
+        SolicitudDAO solDAO = new SolicitudDAO();
+
+        try {
+            String accion = request.getParameter("accion");
+
+            if ("aprobar".equals(accion)) {
+                int idDevolucion = Integer.parseInt(request.getParameter("id"));
+                devDAO.aprobar(idDevolucion);
+                response.sendRedirect(request.getContextPath() + "/DevolucionServlet");
+                return;
+            }
+
+            List<Solicitud> todas = solDAO.listar();
+
+            todas.removeIf(s -> !"Entregada".equals(s.getEstadoSolicitud()));
+
             Map<Integer, Integer> pendientes = new HashMap<>();
             List<Solicitud> candidatas = new ArrayList<>();
             for (Solicitud s : todas) {
@@ -41,6 +56,10 @@ public class DevolucionServlet extends HttpServlet {
             request.setAttribute("solicitudes", candidatas);
             request.setAttribute("pendientes", pendientes);
             request.setAttribute("devoluciones", devDAO.listar());
+            request.getRequestDispatcher("/WEB-INF/vistas/devolucion.jsp").forward(request, response);
+
+        } catch (Exception e) {
+            request.setAttribute("error", "Error procesando la solicitud.");
             request.getRequestDispatcher("/WEB-INF/vistas/devolucion.jsp").forward(request, response);
         } finally {
             solDAO.close();
@@ -57,6 +76,11 @@ public class DevolucionServlet extends HttpServlet {
         request.setCharacterEncoding("UTF-8");
 
         Empleado sesion = (Empleado) request.getSession().getAttribute("empleado");
+        if (!AuthUtils.tieneAccesoCompleto(sesion, "Devolucion")) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN);
+            return;
+        }
+
         SolicitudDAO solDAO = new SolicitudDAO();
         DevolucionDAO devDAO = new DevolucionDAO();
 
@@ -81,9 +105,6 @@ public class DevolucionServlet extends HttpServlet {
                 return;
             }
 
-            // Validación server-side del motivo obligatorio: no confiamos
-            // solo en el modal de JS, por si alguien salta el frontend.
-            // Se compara contra lo PENDIENTE, no contra el total original.
             if (cantidadDevuelta < disponibleParaDevolver && (motivo == null || motivo.trim().isEmpty())) {
                 request.setAttribute("error", "Debes indicar el motivo cuando la devolución es parcial (menor a la cantidad pendiente por devolver).");
                 doGet(request, response);

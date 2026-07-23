@@ -1,10 +1,11 @@
 package controlador;
 
 import modelo.*;
+import util.AuthUtils;
 import servicios.PeruApiService;
 
-import javax.servlet.*;
-import javax.servlet.http.*;
+import jakarta.servlet.*;
+import jakarta.servlet.http.*;
 import java.io.IOException;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -16,6 +17,13 @@ public class ProveedorServlet extends HttpServlet {
             throws ServletException, IOException {
 
         if (!verificarSesion(request, response)) {
+            return;
+        }
+
+        Empleado sesion = (Empleado) request.getSession().getAttribute("empleado");
+
+        if (!AuthUtils.puedeVerModulo(sesion, "Proveedores")) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN);
             return;
         }
 
@@ -32,6 +40,11 @@ public class ProveedorServlet extends HttpServlet {
 
             } else if (accion.equals("editar")) {
 
+                if (!AuthUtils.tieneAccesoCompleto(sesion, "Proveedores")) {
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN);
+                    return;
+                }
+
                 int id = Integer.parseInt(request.getParameter("id"));
 
                 request.setAttribute("proveedorEditar", dao.buscar(id));
@@ -41,6 +54,11 @@ public class ProveedorServlet extends HttpServlet {
                         .forward(request, response);
 
             } else if (accion.equals("eliminar")) {
+
+                if (!AuthUtils.tieneAccesoCompleto(sesion, "Proveedores")) {
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN);
+                    return;
+                }
 
                 int id = Integer.parseInt(request.getParameter("id"));
                 dao.eliminar(id);
@@ -82,6 +100,13 @@ public class ProveedorServlet extends HttpServlet {
             } else {
                 response.setStatus(HttpServletResponse.SC_NOT_FOUND);
             }
+            return;
+        }
+
+        // Guardar/actualizar solo para quien tenga acceso completo (Gerente Compras)
+        Empleado sesion = (Empleado) request.getSession().getAttribute("empleado");
+        if (!AuthUtils.tieneAccesoCompleto(sesion, "Proveedores")) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN);
             return;
         }
 
@@ -153,7 +178,10 @@ public class ProveedorServlet extends HttpServlet {
             }
 
             p.setRuc(request.getParameter("ruc"));
-            p.setRazonSocial(request.getParameter("razonSocial").trim());
+
+            if (!"actualizar".equals(accion)) {
+                p.setRazonSocial(request.getParameter("razonSocial").trim());
+            }
 
             p.setContacto(
                     request.getParameter("contacto") != null

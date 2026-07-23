@@ -1,10 +1,10 @@
 package modelo;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.util.List;
 
 public class SolicitudDAO {
-    private EntityManager em;
+    private final EntityManager em;
 
     public SolicitudDAO() {
         em = Conexion.getInstance().createEntityManager();
@@ -14,7 +14,20 @@ public class SolicitudDAO {
         return em.createQuery("SELECT s FROM Solicitud s ORDER BY s.fechaSolicitud DESC", Solicitud.class).getResultList();
     }
 
-    // Solo las solicitudes del empleado en sesión
+    public List<Solicitud> listarParaConformidad() {
+        return em.createQuery(
+            "SELECT s FROM Solicitud s WHERE s.estadoSolicitud NOT IN ('Entregada', 'Rechazada') ORDER BY s.fechaSolicitud DESC", 
+            Solicitud.class).getResultList();
+    }
+
+    public List<Solicitud> listarParaConformidadPorEmpleado(int idEmpleado) {
+        return em.createQuery(
+            "SELECT s FROM Solicitud s WHERE s.empleado.idEmpleado = :id AND s.estadoSolicitud NOT IN ('Entregada', 'Rechazada') ORDER BY s.fechaSolicitud DESC", 
+            Solicitud.class)
+            .setParameter("id", idEmpleado)
+            .getResultList();
+    }
+    
     public List<Solicitud> listarPorEmpleado(int idEmpleado) {
         return em.createQuery(
             "SELECT s FROM Solicitud s WHERE s.empleado.idEmpleado = :id ORDER BY s.fechaSolicitud DESC",
@@ -44,7 +57,6 @@ public class SolicitudDAO {
         Solicitud s = em.find(Solicitud.class, idSolicitud);
         if (s != null) {
             s.setEstadoSolicitud(nuevoEstado);
-            // Si se rechaza, guardar el motivo en descripcion
             if ("Rechazada".equals(nuevoEstado) && motivo != null && !motivo.trim().isEmpty()) {
                 s.setDescripcion(s.getDescripcion() + " | Motivo rechazo: " + motivo.trim());
             }

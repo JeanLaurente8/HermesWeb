@@ -1,10 +1,10 @@
 package modelo;
  
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.util.List;
  
 public class ProveedorDAO {
-    private EntityManager em;
+    private final EntityManager em;
  
     public ProveedorDAO() {
         em = Conexion.getInstance().createEntityManager();

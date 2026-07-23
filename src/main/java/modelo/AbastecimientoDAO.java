@@ -1,7 +1,7 @@
 package modelo;
 
-import javax.persistence.EntityManager;
-import javax.persistence.NoResultException;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.NoResultException;
 import java.util.List;
 
 public class AbastecimientoDAO {
@@ -29,9 +29,6 @@ public class AbastecimientoDAO {
         try {
             em.getTransaction().begin();
 
-            // Cargamos la orden con su detalle y artículos en la MISMA
-            // transacción, para que los cambios de stock queden gestionados
-            // por este EntityManager.
             Ordencompra oc = em.createQuery(
                 "SELECT DISTINCT o FROM Ordencompra o " +
                 "LEFT JOIN FETCH o.detalles d " +
@@ -44,18 +41,14 @@ public class AbastecimientoDAO {
                 throw new IllegalStateException("La OC-" + idOrden + " no tiene artículos en su detalle.");
             }
 
-            // Persistimos el abastecimiento
             a.setOrden(oc);
             em.persist(a);
 
-            // Aumentamos el stock de cada artículo según su cantidad en detalle_oc.
-            // El trigger tr_evaluar_stock_hermes recalcula requiere_compra solo.
             for (DetalleOc d : oc.getDetalles()) {
                 Articulo articulo = d.getArticulo();
                 articulo.setStock(articulo.getStock() + d.getCantidad());
             }
 
-            // Actualizamos el estado de la OC
             oc.setEstadoOc("Conforme");
 
             em.getTransaction().commit();

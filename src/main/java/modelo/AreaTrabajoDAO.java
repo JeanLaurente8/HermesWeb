@@ -1,10 +1,10 @@
 package modelo;
  
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.util.List;
  
 public class AreaTrabajoDAO {
-    private EntityManager em;
+    private final EntityManager em;
  
     public AreaTrabajoDAO() {
         em = Conexion.getInstance().createEntityManager();

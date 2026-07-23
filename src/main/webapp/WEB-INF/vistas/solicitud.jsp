@@ -156,19 +156,19 @@
                                             <%-- Línea 1 (inicial) --%>
                                             <div class="detalle-row d-flex align-items-center gap-3" id="linea-1">
                                                 <div class="flex-grow-1">
-                                                    <select name="idArticulo[]" class="form-select" required>
+                                                    <select name="idArticulo[]" class="form-select" required onchange="actualizarStockLinea(this)">
                                                         <option value="">— Seleccionar artículo —</option>
                                                         <% if (articulos != null) {
-                                                for (Articulo art : articulos) {%>
-                                                        <option value="<%= art.getIdArticulo()%>"><%= art.getNombre()%></option>
+                                                                for (Articulo art : articulos) {%>
+                                                        <option value="<%= art.getIdArticulo()%>" data-stock="<%= art.getStock()%>"><%= art.getNombre()%> (Stock: <%= art.getStock()%>)</option>
                                                         <% }
-                                            } %>
+                                                            } %>
                                                     </select>
                                                     <div class="invalid-feedback">Seleccione un artículo.</div>
                                                 </div>
                                                 <div style="width:130px">
-                                                    <input type="number" name="cantidad[]" class="form-control" min="1" value="1" required placeholder="Cantidad">
-                                                    <div class="invalid-feedback">Mín. 1.</div>
+                                                    <input type="number" name="cantidad[]" class="form-control" min="1" value="1" required placeholder="Cantidad" oninput="actualizarStockLinea(this)">
+                                                    <div class="invalid-feedback">Supera el stock disponible.</div>
                                                 </div>
                                                 <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarLinea(this)" disabled>
                                                     <i class="fas fa-times"></i>
@@ -253,13 +253,13 @@
                                                     <%-- Botón detalles — siempre visible --%>
                                                     <button class="btn btn-sm btn-outline-secondary me-1"
                                                             onclick="verDetalles(<%= s.getIdSolicitud()%>,
-                                                        '<%= s.getEmpleado() != null ? s.getEmpleado().getNombreCompleto().replace("'", "") : ""%>',
-                                                        '<%= s.getArea() != null ? s.getArea().getNombreArea().replace("'", "") : ""%>',
-                                                        '<%= s.getArticulo() != null ? s.getArticulo().getNombre().replace("'", "") : ""%>',
-                                                        '<%= s.getCantidad()%>',
-                                                        '<%= s.getEstadoSolicitud()%>',
-                                                        '<%= s.getFechaSolicitud() != null ? s.getFechaSolicitud().toString().replace("T", " ").substring(0, 16) : ""%>',
-                                                        '<%= s.getDescripcion() != null ? s.getDescripcion().replace("'", "").replace("\"", "") : ""%>')"
+                                                                            '<%= s.getEmpleado() != null ? s.getEmpleado().getNombreCompleto().replace("'", "") : ""%>',
+                                                                            '<%= s.getArea() != null ? s.getArea().getNombreArea().replace("'", "") : ""%>',
+                                                                            '<%= s.getArticulo() != null ? s.getArticulo().getNombre().replace("'", "") : ""%>',
+                                                                            '<%= s.getCantidad()%>',
+                                                                            '<%= s.getEstadoSolicitud()%>',
+                                                                            '<%= s.getFechaSolicitud() != null ? s.getFechaSolicitud().toString().replace("T", " ").substring(0, 16) : ""%>',
+                                                                            '<%= s.getDescripcion() != null ? s.getDescripcion().replace("'", "").replace("\"", "") : ""%>')"
                                                             title="Ver detalles">
                                                         <i class="fas fa-eye"></i>
                                                     </button>
@@ -281,7 +281,7 @@
                                                 </td>
                                             </tr>
                                             <% }
-                        } else { %>
+                                            } else { %>
                                             <tr><td colspan="7" class="text-center py-5 text-muted">
                                                     <i class="fas fa-clipboard-list fa-3x mb-3 d-block"></i>No hay solicitudes registradas
                                                 </td></tr>
@@ -370,22 +370,22 @@
 
                                 const articulosData = [
             <%
-                    if (articulos != null) {
-                        boolean primero = true;
-                        for (Articulo art : articulos) {
-                            if (!primero) {
-                                out.print(",");
-                            }
-                            String nombreEscapado = art.getNombre() == null ? ""
-                                    : art.getNombre()
-                                            .replace("\\", "\\\\")
-                                            .replace("\"", "\\\"")
-                                            .replace("\r", "")
-                                            .replace("\n", " ");
-                            out.print("{\"id\":" + art.getIdArticulo() + ",\"nombre\":\"" + nombreEscapado + "\"}");
-                            primero = false;
+                if (articulos != null) {
+                    boolean primero = true;
+                    for (Articulo art : articulos) {
+                        if (!primero) {
+                            out.print(",");
                         }
+                        String nombreEscapado = art.getNombre() == null ? ""
+                                : art.getNombre()
+                                        .replace("\\", "\\\\")
+                                        .replace("\"", "\\\"")
+                                        .replace("\r", "")
+                                        .replace("\n", " ");
+                        out.print("{\"id\":" + art.getIdArticulo() + ",\"nombre\":\"" + nombreEscapado + "\",\"stock\":" + art.getStock() + "}");
+                        primero = false;
                     }
+                }
             %>
                                 ];
 
@@ -403,13 +403,29 @@
                                     articulosData.forEach(art => {
                                         const opt = document.createElement('option');
                                         opt.value = art.id;
-                                        opt.textContent = art.nombre;
+                                        opt.textContent = art.nombre + ' (Stock: ' + art.stock + ')';
+                                        opt.setAttribute('data-stock', art.stock);
                                         select.appendChild(opt);
+                                    });
+
+                                    select.addEventListener('change', function () {
+                                        const row = this.closest('.detalle-row');
+                                        const inputCantidad = row.querySelector('input[name="cantidad[]"]');
+                                        const selectedOpt = this.options[this.selectedIndex];
+                                        const stock = selectedOpt.getAttribute('data-stock');
+
+                                        if (stock) {
+                                            inputCantidad.max = stock;
+                                            if (parseInt(inputCantidad.value) > parseInt(stock)) {
+                                                inputCantidad.value = stock;
+                                            }
+                                        } else {
+                                            inputCantidad.removeAttribute('max');
+                                        }
                                     });
 
                                     return select;
                                 }
-
                                 function agregarLinea() {
                                     contadorLineas++;
                                     document.getElementById('contadorLineas').textContent = contadorLineas;
@@ -460,7 +476,6 @@
                                     }
                                 }
 
-                                // MODAL DETALLES
                                 function verDetalles(id, empleado, area, articulo, cantidad, estado, fecha, descripcion) {
                                     document.getElementById('detId').textContent = '#' + id;
                                     document.getElementById('detEmpleado').textContent = empleado || '—';
@@ -484,7 +499,6 @@
                                     new bootstrap.Modal(document.getElementById('modalDetalles')).show();
                                 }
 
-                                // MODAL RECHAZO
                                 function abrirModalRechazo(idSolicitud) {
                                     document.getElementById('idSolicitudRechazo').value = idSolicitud;
                                     document.getElementById('motivoRechazo').value = '';
@@ -500,6 +514,22 @@
                                     }
                                     document.getElementById('errorMotivo').classList.add('d-none');
                                     document.getElementById('formRechazo').submit();
+                                }
+
+                                function actualizarStockLinea(selectEl) {
+                                    const row = selectEl.closest('.detalle-row');
+                                    const inputCantidad = row.querySelector('input[name="cantidad[]"]');
+                                    const selectedOpt = selectEl.options[selectEl.selectedIndex];
+                                    const stock = selectedOpt.getAttribute('data-stock');
+
+                                    if (stock) {
+                                        inputCantidad.max = stock;
+                                        if (parseInt(inputCantidad.value) > parseInt(stock)) {
+                                            inputCantidad.value = stock;
+                                        }
+                                    } else {
+                                        inputCantidad.removeAttribute('max');
+                                    }
                                 }
 
                                 // VALIDACIÓN BOOTSTRAP

@@ -1,6 +1,6 @@
 package modelo;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 
 @Entity
 @Table(name = "area_trabajo")
